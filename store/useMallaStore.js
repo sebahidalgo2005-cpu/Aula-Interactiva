@@ -57,6 +57,14 @@ export const useMallaStore = create(
 
       agregarHorario: (horario) => set((state) => ({ horarios: [...state.horarios, horario] })),
       eliminarHorario: (id) => set((state) => ({ horarios: state.horarios.filter(h => h.id !== id) })),
+
+      // === SOLUCIÓN: NUEVAS FUNCIONES DE CATEGORÍAS ===
+      agregarCategoria: (categoria) => set((state) => ({ 
+        categorias: [...state.categorias, categoria] 
+      })),
+      eliminarCategoria: (id) => set((state) => ({ 
+        categorias: state.categorias.filter(c => c.id !== id) 
+      })),
     }),
     {
       name: 'malla-interactiva-storage',

@@ -4,89 +4,105 @@ import { useMallaStore } from '@/store/useMallaStore'
 import { X, Plus, Trash2, Tag } from 'lucide-react'
 
 export default function ModalGestorCategorias() {
+  // Ahora extraemos exitosamente agregarCategoria y eliminarCategoria del Store
   const { categorias, agregarCategoria, eliminarCategoria, modalCategoriasAbierto, setModalCategoriasAbierto } = useMallaStore()
-  
-  const [nuevaCat, setNuevaCat] = useState({ nombre: '', color: '#3b82f6' })
+  const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: '', color: '#3b82f6' })
 
   if (!modalCategoriasAbierto) return null
 
-  const handleCrear = (e) => {
-    e.preventDefault()
-    if (!nuevaCat.nombre.trim()) return
-
-    const categoriaCompleta = {
+  const handleAgregar = () => {
+    if (!nuevaCategoria.nombre.trim()) return
+    
+    const nueva = {
       id: Date.now(),
-      nombre: nuevaCat.nombre,
-      color: nuevaCat.color
+      nombre: nuevaCategoria.nombre.trim(),
+      color: nuevaCategoria.color
     }
-
-    agregarCategoria(categoriaCompleta)
-    setNuevaCat({ nombre: '', color: '#3b82f6' })
+    
+    agregarCategoria(nueva)
+    setNuevaCategoria({ nombre: '', color: '#3b82f6' }) // Resetea los campos
   }
 
   return (
     <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden border border-slate-200">
         
-        <div className="flex justify-between items-center p-5 bg-slate-900 text-white">
-          <h2 className="text-xl font-extrabold flex items-center gap-2">
-            <Tag size={20} className="text-sky-400" /> Gestor de Categorías
+        {/* Cabecera */}
+        <div className="flex justify-between items-center p-5 border-b bg-slate-50">
+          <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+            <Tag size={20} className="text-blue-600"/> Gestor de Categorías
           </h2>
-          <button onClick={() => setModalCategoriasAbierto(false)} className="text-slate-400 hover:text-white transition rounded-full p-1.5 hover:bg-slate-800">
-            <X size={20} />
+          <button onClick={() => setModalCategoriasAbierto(false)} className="text-slate-500 hover:text-red-600 transition p-1 bg-white rounded-full shadow-sm border border-slate-200">
+            <X size={20} strokeWidth={2.5} />
           </button>
         </div>
 
+        {/* Cuerpo */}
         <div className="p-6 space-y-6">
-          <form onSubmit={handleCrear} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Crear Nueva Categoría</p>
-            <div className="flex gap-3">
+          {/* Añadir nueva categoría */}
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Nombre</label>
               <input 
                 type="text" 
-                placeholder="Nombre (ej. Matemáticas)" 
-                value={nuevaCat.nombre}
-                onChange={(e) => setNuevaCat({...nuevaCat, nombre: e.target.value})}
-                className="flex-1 border-2 border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-blue-600 bg-white"
+                value={nuevaCategoria.nombre} 
+                onChange={(e) => setNuevaCategoria({...nuevaCategoria, nombre: e.target.value})}
+                placeholder="Ej: Ciencias Básicas"
+                className="w-full border-2 border-slate-300 rounded-lg p-2.5 text-sm font-bold text-slate-900 outline-none focus:border-blue-500 transition"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Color</label>
               <input 
                 type="color" 
-                value={nuevaCat.color}
-                onChange={(e) => setNuevaCat({...nuevaCat, color: e.target.value})}
-                className="w-12 h-10 border-0 rounded-lg cursor-pointer bg-transparent"
+                value={nuevaCategoria.color} 
+                onChange={(e) => setNuevaCategoria({...nuevaCategoria, color: e.target.value})}
+                className="h-[46px] w-12 border-2 border-slate-300 rounded-lg cursor-pointer p-0.5 bg-white transition focus:border-blue-500"
               />
-              <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-1 shadow-md">
-                <Plus size={18} /> Agregar
-              </button>
             </div>
-          </form>
+            <button 
+              onClick={handleAgregar}
+              className="bg-blue-600 hover:bg-blue-700 text-white p-[11px] rounded-lg transition font-bold shadow-md h-[46px] flex items-center justify-center"
+            >
+              <Plus size={20} strokeWidth={2.5} />
+            </button>
+          </div>
 
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Categorías Existentes</p>
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-              {categorias.map((cat) => (
-                <div key={cat.id} className="flex justify-between items-center bg-white p-3 rounded-xl border-2 border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full shadow-inner" style={{ backgroundColor: cat.color }}></div>
-                    <span className="font-extrabold text-slate-900 text-sm">{cat.nombre}</span>
-                  </div>
-                  <button 
-                    onClick={() => eliminarCategoria(cat.id)}
-                    className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+          {/* Lista de Categorías */}
+          <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+            {categorias.map(cat => (
+              <div key={cat.id} className="flex justify-between items-center bg-white border-2 border-slate-100 p-3 rounded-xl shadow-sm hover:border-slate-300 transition">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full shadow-sm border border-slate-200" style={{ backgroundColor: cat.color }}></div>
+                  <span className="font-extrabold text-slate-800 text-sm">{cat.nombre}</span>
                 </div>
-              ))}
-            </div>
+                <button 
+                  onClick={() => eliminarCategoria(cat.id)}
+                  className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
+            
+            {categorias.length === 0 && (
+              <div className="text-center bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl py-6">
+                <p className="text-sm text-slate-500 font-bold">No hay categorías configuradas.</p>
+                <p className="text-xs text-slate-400 mt-1">Crea una para organizar tus ramos.</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex justify-end p-4 bg-slate-50 border-t border-slate-200">
-          <button onClick={() => setModalCategoriasAbierto(false)} className="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-bold text-sm transition">
-            Cerrar
+        {/* Pie de página */}
+        <div className="p-5 border-t bg-slate-50">
+          <button 
+            onClick={() => setModalCategoriasAbierto(false)}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg transition shadow-md"
+          >
+            Guardar y Cerrar
           </button>
         </div>
-
       </div>
     </div>
   )
