@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react'
 import { useMallaStore } from '@/store/useMallaStore'
 import { createClient } from '@/utils/supabase/client'
-import { X, Trash2, Save, Plus, BookOpen, Calculator, FolderOpen, AlertCircle, Edit3, Eye, Tag, Sliders, Lock, Key, CalendarRange, Award } from 'lucide-react'
+// 👇 AQUÍ ESTÁ EL ARREGLO: Agregamos UploadCloud al final de esta línea
+import { X, Trash2, Save, Plus, BookOpen, Calculator, FolderOpen, AlertCircle, Edit3, Eye, Tag, Sliders, Lock, Key, CalendarRange, Award, UploadCloud } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -24,7 +25,7 @@ export default function ModalRamo() {
     fecha_inicio: '', fecha_fin: '', 
     permite_eximicion: false, nota_eximicion: 5.5, nota_aprobacion: 4.0,
     exige_asistencia: false, porcentaje_asistencia_minima: 70,
-    apuntes: '# Apuntes de Clase', prerrequisitos: [], grupos: []
+    apuntes: '# Apuntes de Clase', prerrequisitos: [], grupos: [], archivos: []
   })
 
   useEffect(() => {
@@ -44,7 +45,8 @@ export default function ModalRamo() {
         porcentaje_asistencia_minima: ramoSeleccionado.porcentaje_asistencia_minima || 70,
         apuntes: ramoSeleccionado.apuntes || '# Apuntes de Clase',
         prerrequisitos: ramoSeleccionado.prerrequisitos?.filter(id => ramos.some(r => r.id === id)) || [],
-        grupos: ramoSeleccionado.grupos || []
+        grupos: ramoSeleccionado.grupos || [],
+        archivos: ramoSeleccionado.archivos || []
       })
       setActivarSimulador(false)
     }
@@ -81,7 +83,6 @@ export default function ModalRamo() {
     try {
       setGuardando(true)
 
-      // Sanitizar datos: convertir string vacío de fechas a null para PostgreSQL
       const datosParaBD = {
         ...formData,
         fecha_inicio: formData.fecha_inicio && formData.fecha_inicio.trim() !== '' ? formData.fecha_inicio : null,
@@ -320,66 +321,60 @@ export default function ModalRamo() {
             </div>
           )}
 
-          {/* DENTRO DE components/ModalRamo.jsx - PESTAÑA AULA VIRTUAL */}
-{tab === 'archivos' && (
-  <div className="space-y-6">
-    
-    {/* NUEVO: SECCIÓN DE SUBIDA DE ARCHIVOS A SUPABASE */}
-    <div className="bg-white p-5 rounded-xl border-2 border-slate-200 shadow-sm">
-      <h3 className="font-extrabold text-slate-900 mb-4 flex items-center gap-2"><UploadCloud size={18} className="text-blue-600"/> Material de Estudio (PDF, DOCX, PPT)</h3>
-      
-      <div className="space-y-3 mb-4">
-        {formData.archivos?.length > 0 ? formData.archivos.map((archivo, idx) => (
-          <div key={idx} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-             <a href={archivo.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-2"><FolderOpen size={16}/> {archivo.nombre}</a>
-             <button onClick={() => setFormData({...formData, archivos: formData.archivos.filter((_, i) => i !== idx)})} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
-          </div>
-        )) : <p className="text-sm text-slate-500 font-medium">No hay archivos subidos aún.</p>}
-      </div>
+          {tab === 'archivos' && (
+            <div className="space-y-6">
+              
+              <div className="bg-white p-5 rounded-xl border-2 border-slate-200 shadow-sm">
+                <h3 className="font-extrabold text-slate-900 mb-4 flex items-center gap-2"><UploadCloud size={18} className="text-blue-600"/> Material de Estudio (PDF, DOCX, PPT)</h3>
+                
+                <div className="space-y-3 mb-4">
+                  {formData.archivos?.length > 0 ? formData.archivos.map((archivo, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+                       <a href={archivo.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-2"><FolderOpen size={16}/> {archivo.nombre}</a>
+                       <button onClick={() => setFormData({...formData, archivos: formData.archivos.filter((_, i) => i !== idx)})} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
+                    </div>
+                  )) : <p className="text-sm text-slate-500 font-medium">No hay archivos subidos aún.</p>}
+                </div>
 
-      <label className="w-full flex justify-center items-center gap-2 border-2 border-dashed border-blue-400 text-blue-600 py-3 rounded-xl hover:bg-blue-50 cursor-pointer transition font-bold cursor-pointer">
-        <UploadCloud size={20} /> Subir Archivo Nuevo
-        <input 
-          type="file" 
-          className="hidden" 
-          onChange={async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const { data: { user } } = await supabase.auth.getUser();
-            const ruta = `${user.id}/${ramoSeleccionado.id}/${Date.now()}-${file.name}`;
-            
-            // Subida a Supabase Storage (Bucket: material_estudio)
-            const { error: uploadError } = await supabase.storage.from('material_estudio').upload(ruta, file);
-            if (uploadError) return alert("Error al subir el archivo. Verifica que el Bucket 'material_estudio' exista en Supabase.");
-            
-            // Obtener URL Pública
-            const { data: { publicUrl } } = supabase.storage.from('material_estudio').getPublicUrl(ruta);
-            
-            // Guardar en el estado local
-            const nuevosArchivos = [...(formData.archivos || []), { nombre: file.name, url: publicUrl, ruta: ruta }];
-            setFormData({ ...formData, archivos: nuevosArchivos });
-          }} 
-        />
-      </label>
-    </div>
+                <label className="w-full flex justify-center items-center gap-2 border-2 border-dashed border-blue-400 text-blue-600 py-3 rounded-xl hover:bg-blue-50 transition font-bold cursor-pointer">
+                  <UploadCloud size={20} /> Subir Archivo Nuevo
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const { data: { user } } = await supabase.auth.getUser();
+                      const ruta = `${user.id}/${ramoSeleccionado.id}/${Date.now()}-${file.name}`;
+                      
+                      const { error: uploadError } = await supabase.storage.from('material_estudio').upload(ruta, file);
+                      if (uploadError) return alert("Error al subir el archivo. Verifica que el Bucket 'material_estudio' exista en Supabase.");
+                      
+                      const { data: { publicUrl } } = supabase.storage.from('material_estudio').getPublicUrl(ruta);
+                      
+                      const nuevosArchivos = [...(formData.archivos || []), { nombre: file.name, url: publicUrl, ruta: ruta }];
+                      setFormData({ ...formData, archivos: nuevosArchivos });
+                    }} 
+                  />
+                </label>
+              </div>
 
-    {/* EDITOR MARKDOWN (Lo que ya tenías) */}
-    <div className="flex justify-between items-center bg-slate-200 p-2 rounded-xl mt-6">
-      <span className="text-xs font-extrabold text-slate-700 uppercase pl-2">Editor Markdown & LaTeX</span>
-      <div className="flex gap-2">
-        <button onClick={() => setModoEdicionApuntes(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${modoEdicionApuntes ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}><Edit3 size={14} /> Editar</button>
-        <button onClick={() => setModoEdicionApuntes(false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${!modoEdicionApuntes ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}><Eye size={14} /> Vista Previa</button>
-      </div>
-    </div>
-    {modoEdicionApuntes ? (
-      <textarea value={formData.apuntes} onChange={(e) => setFormData({...formData, apuntes: e.target.value})} className="w-full h-96 p-4 font-mono text-sm border-2 border-slate-300 rounded-xl outline-none text-slate-900 bg-white" />
-    ) : (
-      <div className="w-full h-96 p-6 border-2 border-slate-300 rounded-xl bg-white overflow-y-auto prose max-w-none text-slate-900">
-        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{formData.apuntes}</ReactMarkdown>
-      </div>
-    )}
-  </div>
-)}
+              <div className="flex justify-between items-center bg-slate-200 p-2 rounded-xl mt-6">
+                <span className="text-xs font-extrabold text-slate-700 uppercase pl-2">Editor Markdown & LaTeX</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setModoEdicionApuntes(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${modoEdicionApuntes ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}><Edit3 size={14} /> Editar</button>
+                  <button onClick={() => setModoEdicionApuntes(false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${!modoEdicionApuntes ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}><Eye size={14} /> Vista Previa</button>
+                </div>
+              </div>
+              {modoEdicionApuntes ? (
+                <textarea value={formData.apuntes} onChange={(e) => setFormData({...formData, apuntes: e.target.value})} className="w-full h-96 p-4 font-mono text-sm border-2 border-slate-300 rounded-xl outline-none text-slate-900 bg-white" />
+              ) : (
+                <div className="w-full h-96 p-6 border-2 border-slate-300 rounded-xl bg-white overflow-y-auto prose max-w-none text-slate-900">
+                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{formData.apuntes}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
 

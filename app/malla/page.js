@@ -6,9 +6,10 @@ import TableroMalla from '@/components/TableroMalla'
 import ModalGestorCategorias from '@/components/ModalGestorCategorias'
 import ModalRamo from '@/components/ModalRamo'
 import { useMallaStore } from '@/store/useMallaStore'
-import { User, Settings, Plus, Minus, LogOut, Link as LinkIcon, Calendar as CalendarIcon, LayoutDashboard, TrendingUp, Download, Share2, UploadCloud } from 'lucide-react'
+// Importamos todos los iconos nuevamente, incluyendo el Calendario
+import { Settings, Plus, Minus, LogOut, Link as LinkIcon, Calendar as CalendarIcon, LayoutDashboard, TrendingUp, Download, Share2, UploadCloud } from 'lucide-react'
 import Link from 'next/link'
-import html2canvas from 'html2canvas' // <--- LIBRERÍA DE EXPORTACIÓN
+import html2canvas from 'html2canvas' 
 
 export default function MallaPage() {
   const supabase = createClient()
@@ -43,7 +44,7 @@ export default function MallaPage() {
     return () => { estaMontado = false }
   }, [router, setRamos])
 
-  // --- NUEVA FUNCIÓN: EXPORTAR A PNG ---
+  // --- FUNCIÓN: EXPORTAR A PNG ---
   const exportarMalla = async () => {
     setExportando(true)
     try {
@@ -62,9 +63,8 @@ export default function MallaPage() {
     }
   }
 
-  // --- NUEVA FUNCIÓN: COMPARTIR PLANTILLA ---
+  // --- FUNCIÓN: COMPARTIR PLANTILLA ---
   const compartirMalla = () => {
-    // Genera un JSON limpio sin IDs de usuario para compartir
     const mallaLimpia = ramos.map(({ id, usuario_id, ...resto }) => resto)
     const mallaJSON = JSON.stringify(mallaLimpia)
     navigator.clipboard.writeText(mallaJSON)
@@ -95,12 +95,25 @@ export default function MallaPage() {
         </div>
 
         <div className="px-6 py-5 border-t border-slate-700/50 flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+          
           <h3 className="text-xs font-bold text-slate-400 mb-3 tracking-widest uppercase">Módulos Principales</h3>
-          <Link href="/dashboard" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold"><LayoutDashboard size={16} className="text-sky-400" /> Panel de Inicio</Link>
-          <Link href="/rendimiento" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold"><TrendingUp size={16} className="text-emerald-400" /> Rendimiento & PPA</Link>
+          <Link href="/dashboard" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700">
+            <LayoutDashboard size={16} className="text-sky-400" /> Panel de Inicio
+          </Link>
+          <Link href="/rendimiento" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700 mt-2">
+            <TrendingUp size={16} className="text-emerald-400" /> Rendimiento & PPA
+          </Link>
+          
+          {/* AQUÍ ESTÁN RESTAURADOS TUS ENLACES DE EVALUACIONES Y CALENDARIO */}
+          <Link href="/evaluaciones" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700 mt-2">
+            <CalendarIcon size={16} className="text-amber-400" /> Pruebas y Tareas
+          </Link>
+          <Link href="/calendario" className="w-full flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold shadow-md shadow-blue-500/20 mt-2">
+            <CalendarIcon size={16} /> Horario y Asistencia
+          </Link>
+
 
           <h3 className="text-xs font-bold text-slate-400 mt-6 mb-3 tracking-widest uppercase">Herramientas Pro</h3>
-          {/* BOTONES NUEVOS */}
           <button onClick={exportarMalla} disabled={exportando} className="w-full flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-sm py-2.5 px-4 rounded-md text-left transition text-white font-bold shadow-md">
             <Download size={16} /> {exportando ? 'Exportando...' : 'Exportar Malla (PNG)'}
           </button>
@@ -126,7 +139,6 @@ export default function MallaPage() {
         </div>
       </aside>
 
-      {/* AQUÍ AÑADIMOS EL ID "contenedor-malla" PARA QUE EL EXPORTADOR SEPA QUÉ FOTOGRAFIAR */}
       <main id="contenedor-malla" className="flex-1 overflow-auto p-8 relative bg-[#f1f5f9]">
         <TableroMalla />
       </main>
