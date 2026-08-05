@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import TableroMalla from '@/components/TableroMalla'
@@ -12,33 +12,37 @@ export default function MallaPage() {
   const supabase = createClient()
   const router = useRouter()
   
-  // Variables vitales extraidas del store
   const { ramos, setRamos, modificarSemestres, modificarFilas, setModalCategoriasAbierto } = useMallaStore()
   
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
 
   useEffect(() => {
+    let estaMontado = true // Solución a las fugas de memoria
+
     const cargarDatos = async () => {
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) return router.push('/')
-        setUser(user)
+        
+        if (estaMontado) setUser(user)
 
         const { data: ramosDB, error: dbError } = await supabase.from('ramos').select('*').eq('usuario_id', user.id)
         if (dbError) throw dbError
 
-        if (ramosDB && Array.isArray(ramosDB)) {
+        if (estaMontado && ramosDB && Array.isArray(ramosDB)) {
           setRamos(ramosDB)
         }
       } catch (error) {
         console.error("Error al cargar la malla:", error)
       } finally {
-        setLoading(false)
+        if (estaMontado) setLoading(false)
       }
     }
     cargarDatos()
-  }, [])
+
+    return () => { estaMontado = false }
+  }, [router, setRamos])
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-[#0f172a] text-white font-bold text-xl">Cargando Malla...</div>
 

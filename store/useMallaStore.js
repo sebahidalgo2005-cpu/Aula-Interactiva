@@ -10,16 +10,15 @@ export const useMallaStore = create((set, get) => ({
   ],
   
   ramoSeleccionado: null,
-  ramoEnFoco: null, // Restablecido para la iluminación de prerrequisitos
+  ramoEnFoco: null, 
   modalCategoriasAbierto: false,
   
-  // Variables vitales para que la malla se dibuje (Restablecidas)
   numSemestres: 10,
   numFilas: 6,
 
   // Setters Generales
-  setRamos: (ramos) => set({ ramos }),
-  setHorarios: (horarios) => set({ horarios }),
+  setRamos: (ramos) => set({ ramos: ramos || [] }),
+  setHorarios: (horarios) => set({ horarios: horarios || [] }),
   setRamoSeleccionado: (ramo) => set({ ramoSeleccionado: ramo }),
   setRamoEnFoco: (id) => set({ ramoEnFoco: id }),
   setCategorias: (categorias) => set({ categorias }),
@@ -49,7 +48,7 @@ export const useMallaStore = create((set, get) => ({
 
   moverRamo: (ramoId, nuevaColumna, nuevaFila) => set((state) => ({
     ramos: state.ramos.map(r => r.id === ramoId ? { 
-      ...r, semestre_columna: parseInt(nuevaColumna), fila_posicion: parseInt(nuevaFila) 
+      ...r, semestre_columna: parseInt(nuevaColumna, 10), fila_posicion: parseInt(nuevaFila, 10) 
     } : r)
   })),
 
