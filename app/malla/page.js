@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import TableroMalla from '@/components/TableroMalla'
 import ModalGestorCategorias from '@/components/ModalGestorCategorias'
+import ModalRamo from '@/components/ModalRamo' // <-- ¡IMPORTANTE! Faltaba importar el Modal
 import { useMallaStore } from '@/store/useMallaStore'
 import { User, Settings, Plus, Minus, LogOut, Link as LinkIcon, Calendar as CalendarIcon, ListOrdered, LayoutDashboard, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
@@ -12,13 +13,14 @@ export default function MallaPage() {
   const supabase = createClient()
   const router = useRouter()
   
+  // Variables vitales extraidas del store
   const { ramos, setRamos, modificarSemestres, modificarFilas, setModalCategoriasAbierto } = useMallaStore()
   
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    let estaMontado = true // Solución a las fugas de memoria
+    let estaMontado = true
 
     const cargarDatos = async () => {
       try {
@@ -113,6 +115,7 @@ export default function MallaPage() {
       </main>
 
       <ModalGestorCategorias />
+      <ModalRamo /> {/* <-- AHORA SÍ PODRÁS ABRIR LA VENTANA DE EDICIÓN DE RAMOS */}
     </div>
   )
 }

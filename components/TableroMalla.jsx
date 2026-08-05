@@ -5,7 +5,6 @@ import { useMallaStore } from '@/store/useMallaStore'
 import { createClient } from '@/utils/supabase/client'
 import { Plus, Lock, Key } from 'lucide-react'
 
-// Componente 100% visual (Sin hooks de drag para que no haya conflictos en el DragOverlay)
 function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer, isDragging, isOverlay, onClick, onPointerEnter, onPointerLeave, setNodeRef, attributes, listeners, style }) {
   let visualClasses = "border-slate-300 text-slate-900 bg-white"
   let iconOverlay = null
@@ -25,7 +24,6 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
     if (ramo.estado === 'cursando') visualClasses = "ring-4 ring-yellow-400 font-bold text-black bg-yellow-50"
   }
 
-  // Estilo cuando la tarjeta original se queda en su lugar mientras es arrastrada (efecto fantasma)
   if (isDragging && !isOverlay) {
     visualClasses = "opacity-20 border-dashed bg-slate-100 border-slate-400 scale-95"
   }
@@ -42,7 +40,10 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
       {...listeners}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
-      onClick={onClick}
+      // Garantizamos que el clic abra el modal si no estamos arrastrando
+      onClick={(e) => {
+        if (!isDragging) onClick(e);
+      }}
       className={`absolute inset-0 w-full h-full p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing text-sm flex flex-col justify-center text-left transition-all duration-300 border-y border-r border-l-0 ${visualClasses} ${isOverlay ? 'shadow-2xl opacity-100 ring-4 ring-blue-400 scale-105 rotate-2 z-50 cursor-grabbing' : 'hover:shadow-lg'}`}
     >
       {iconOverlay}
@@ -55,12 +56,9 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
   )
 }
 
-// Envoltorio Lógico que maneja el Dragging
 function RamoCard({ ramo }) {
   const { setRamoSeleccionado, ramoEnFoco, setRamoEnFoco, ramos } = useMallaStore()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ramo.id })
-  
-  // ¡Se eliminó el useEffect problemático que rompía el renderizado de React!
   
   const ramoFocoObj = ramos.find(r => r.id === ramoEnFoco)
   const esFoco = ramoEnFoco === ramo.id
@@ -81,7 +79,7 @@ function RamoCard({ ramo }) {
       listeners={listeners}
       onPointerEnter={() => !isDragging && setRamoEnFoco(ramo.id)}
       onPointerLeave={() => !isDragging && setRamoEnFoco(null)}
-      onClick={() => setRamoSeleccionado(ramo)}
+      onClick={() => setRamoSeleccionado(ramo)} // Acá enviamos la señal de abrir el Modal
     />
   )
 }
@@ -108,12 +106,12 @@ export default function TableroMalla() {
   const [mounted, setMounted] = useState(false)
   const supabase = createClient()
   
-  // Evitar desajustes de hidratación (Hydration mismatch) en DndKit
   useEffect(() => setMounted(true), [])
 
   const semestresArray = Array.from({ length: numSemestres || 6 }, (_, i) => i + 1)
   const filasArray = Array.from({ length: numFilas || 6 }, (_, i) => i + 1)
 
+  // El activationConstraint evita que el Dragging secuestre el click normal
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
@@ -147,7 +145,7 @@ export default function TableroMalla() {
 
   const handleNuevoRamo = async (semestreColumna, filaPosicion) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) return // <- Evita crasheos si el token expiró
+    if (authError || !user) return 
 
     const nuevoRamo = {
       usuario_id: user.id,
@@ -156,7 +154,7 @@ export default function TableroMalla() {
       estado: 'pendiente',
       semestre_columna: semestreColumna,
       fila_posicion: filaPosicion,
-      prerrequisitos: [] // Inicializar como arreglo vacío siempre (Evita fallos futuros)
+      prerrequisitos: [] 
     }
     
     const { data, error } = await supabase.from('ramos').insert(nuevoRamo).select().single()
@@ -165,7 +163,7 @@ export default function TableroMalla() {
 
   const activeRamo = activeId ? ramos.find(r => r.id === activeId) : null
 
-  if (!mounted) return null // Seguridad anti hydration-errors
+  if (!mounted) return null 
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -188,7 +186,6 @@ export default function TableroMalla() {
         ))}
       </div>
 
-      {/* OVERLAY: Esto soluciona que las cartas se escondan al moverlas entre columnas */}
       <DragOverlay>
         {activeRamo ? (
           <div className="relative h-24 w-[240px]">

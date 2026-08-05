@@ -13,6 +13,7 @@ export const useMallaStore = create((set, get) => ({
   ramoEnFoco: null, 
   modalCategoriasAbierto: false,
   
+  // Variables vitales
   numSemestres: 10,
   numFilas: 6,
 
@@ -32,7 +33,7 @@ export const useMallaStore = create((set, get) => ({
     numFilas: Math.max(1, state.numFilas + cantidad)
   })),
 
-  // Funciones CRUD de Ramos
+  // Funciones CRUD de Ramos (Toda tu lógica intacta aquí)
   agregarRamo: (ramo) => set((state) => ({ ramos: [...state.ramos, ramo] })),
   
   actualizarRamo: (id, data) => set((state) => ({
