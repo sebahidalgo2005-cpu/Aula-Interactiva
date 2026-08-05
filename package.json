@@ -1,0 +1,41 @@
+{
+  "name": "mi-universidad-erp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "latest",
+    "@dnd-kit/sortable": "latest",
+    "@dnd-kit/utilities": "latest",
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "latest",
+    "@tailwindcss/postcss": "^4.3.3",
+    "date-fns": "latest",
+    "katex": "^0.18.1",
+    "lucide-react": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-big-calendar": "latest",
+    "react-dom": "latest",
+    "react-markdown": "^10.1.0",
+    "react-xarrows": "latest",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
+    "zustand": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "^8.5.25",
+    "tailwindcss": "^4.3.3",
+    "typescript": "latest"
+  }
+}
