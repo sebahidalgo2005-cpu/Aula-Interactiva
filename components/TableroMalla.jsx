@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { DndContext, useSensor, useSensors, PointerSensor, useDroppable, useDraggable, DragOverlay } from '@dnd-kit/core'
 import { useMallaStore } from '@/store/useMallaStore'
 import { createClient } from '@/utils/supabase/client'
@@ -40,9 +40,8 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
       {...listeners}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
-      // Garantizamos que el clic abra el modal si no estamos arrastrando
       onClick={(e) => {
-        if (!isDragging) onClick(e);
+        if (!isDragging) onClick(e)
       }}
       className={`absolute inset-0 w-full h-full p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing text-sm flex flex-col justify-center text-left transition-all duration-300 border-y border-r border-l-0 ${visualClasses} ${isOverlay ? 'shadow-2xl opacity-100 ring-4 ring-blue-400 scale-105 rotate-2 z-50 cursor-grabbing' : 'hover:shadow-lg'}`}
     >
@@ -79,7 +78,7 @@ function RamoCard({ ramo }) {
       listeners={listeners}
       onPointerEnter={() => !isDragging && setRamoEnFoco(ramo.id)}
       onPointerLeave={() => !isDragging && setRamoEnFoco(null)}
-      onClick={() => setRamoSeleccionado(ramo)} // Acá enviamos la señal de abrir el Modal
+      onClick={() => setRamoSeleccionado(ramo)}
     />
   )
 }
@@ -108,10 +107,18 @@ export default function TableroMalla() {
   
   useEffect(() => setMounted(true), [])
 
+  // Optimización O(1): Construcción de Mapa indexado por coordenadas
+  const mallaMap = useMemo(() => {
+    const map = new Map()
+    ramos.forEach(r => {
+      map.set(`${r.semestre_columna}-${r.fila_posicion}`, r)
+    })
+    return map
+  }, [ramos])
+
   const semestresArray = Array.from({ length: numSemestres || 6 }, (_, i) => i + 1)
   const filasArray = Array.from({ length: numFilas || 6 }, (_, i) => i + 1)
 
-  // El activationConstraint evita que el Dragging secuestre el click normal
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
@@ -131,8 +138,8 @@ export default function TableroMalla() {
 
     if (overId.startsWith('celda-')) {
       const [, semStr, filaStr] = overId.split('-')
-      const nuevoSemestre = parseInt(semStr)
-      const nuevaFila = parseInt(filaStr)
+      const nuevoSemestre = parseInt(semStr, 10)
+      const nuevaFila = parseInt(filaStr, 10)
 
       const celdaOcupada = ramos.some(r => r.semestre_columna === nuevoSemestre && r.fila_posicion === nuevaFila && r.id !== ramoId)
 
@@ -176,7 +183,7 @@ export default function TableroMalla() {
             
             <div className="flex-1 bg-slate-200/40 rounded-xl p-3 border-2 border-slate-300 border-dashed relative">
               {filasArray.map((fila) => {
-                const ramoEnEstaCelda = ramos.find(r => r.semestre_columna === sem && r.fila_posicion === fila)
+                const ramoEnEstaCelda = mallaMap.get(`${sem}-${fila}`)
                 return (
                   <CeldaMalla key={`celda-${sem}-${fila}`} sem={sem} fila={fila} ramo={ramoEnEstaCelda} handleNuevoRamo={handleNuevoRamo} />
                 )

@@ -30,11 +30,16 @@ export default function ModalRamo() {
   useEffect(() => {
     if (ramoSeleccionado) {
       setFormData({
-        nombre: ramoSeleccionado.nombre || '', color: ramoSeleccionado.color || '#3b82f6',
-        estado: ramoSeleccionado.estado || 'pendiente', creditos: ramoSeleccionado.creditos ?? 5,
-        nota_final: ramoSeleccionado.nota_final ?? 4.0, fecha_inicio: ramoSeleccionado.fecha_inicio || '', 
-        fecha_fin: ramoSeleccionado.fecha_fin || '', permite_eximicion: ramoSeleccionado.permite_eximicion || false,
-        nota_eximicion: ramoSeleccionado.nota_eximicion || 5.5, nota_aprobacion: ramoSeleccionado.nota_aprobacion || 4.0,
+        nombre: ramoSeleccionado.nombre || '', 
+        color: ramoSeleccionado.color || '#3b82f6',
+        estado: ramoSeleccionado.estado || 'pendiente', 
+        creditos: ramoSeleccionado.creditos ?? 5,
+        nota_final: ramoSeleccionado.nota_final ?? 4.0, 
+        fecha_inicio: ramoSeleccionado.fecha_inicio || '', 
+        fecha_fin: ramoSeleccionado.fecha_fin || '', 
+        permite_eximicion: ramoSeleccionado.permite_eximicion || false,
+        nota_eximicion: ramoSeleccionado.nota_eximicion || 5.5, 
+        nota_aprobacion: ramoSeleccionado.nota_aprobacion || 4.0,
         exige_asistencia: ramoSeleccionado.exige_asistencia || false,
         porcentaje_asistencia_minima: ramoSeleccionado.porcentaje_asistencia_minima || 70,
         apuntes: ramoSeleccionado.apuntes || '# Apuntes de Clase',
@@ -75,12 +80,27 @@ export default function ModalRamo() {
   const handleGuardar = async () => {
     try {
       setGuardando(true)
-      actualizarRamo(ramoSeleccionado.id, formData)
-      const { error } = await supabase.from('ramos').update({ ...formData }).eq('id', ramoSeleccionado.id)
+
+      // Sanitizar datos: convertir string vacío de fechas a null para PostgreSQL
+      const datosParaBD = {
+        ...formData,
+        fecha_inicio: formData.fecha_inicio && formData.fecha_inicio.trim() !== '' ? formData.fecha_inicio : null,
+        fecha_fin: formData.fecha_fin && formData.fecha_fin.trim() !== '' ? formData.fecha_fin : null,
+      }
+
+      actualizarRamo(ramoSeleccionado.id, datosParaBD)
+
+      const { error } = await supabase
+        .from('ramos')
+        .update(datosParaBD)
+        .eq('id', ramoSeleccionado.id)
+
       if (error) throw error
+
       setRamoSeleccionado(null)
     } catch (error) {
-      alert("Error al guardar en la base de datos.")
+      console.error("Error al guardar en Supabase:", error)
+      alert(`Error al guardar en la base de datos:\n${error.message || 'Comprueba tu conexión o la estructura de la tabla en Supabase.'}`)
     } finally {
       setGuardando(false)
     }
@@ -90,10 +110,12 @@ export default function ModalRamo() {
     if (!window.confirm("¿Estás seguro de eliminar este ramo?")) return
     try {
       eliminarRamo(ramoSeleccionado.id)
-      await supabase.from('ramos').delete().eq('id', ramoSeleccionado.id)
+      const { error } = await supabase.from('ramos').delete().eq('id', ramoSeleccionado.id)
+      if (error) throw error
       setRamoSeleccionado(null)
     } catch (error) {
-      alert("Error al eliminar el ramo.")
+      console.error("Error al borrar el ramo:", error)
+      alert(`Error al eliminar el ramo:\n${error.message || 'Error desconocido'}`)
     }
   }
 
