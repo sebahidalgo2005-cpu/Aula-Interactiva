@@ -20,10 +20,10 @@ export default function ModalRamo() {
   
   const [formData, setFormData] = useState({
     nombre: '', color: '#3b82f6', estado: 'pendiente',
-    creditos: 5, nota_final: 4.0, 
+    creditos: '5', nota_final: '4.0', // FIX: Usamos String para los decimales fluidos
     fecha_inicio: '', fecha_fin: '', 
-    permite_eximicion: false, nota_eximicion: 5.5, nota_aprobacion: 4.0,
-    exige_asistencia: false, porcentaje_asistencia_minima: 70,
+    permite_eximicion: false, nota_eximicion: '5.5', nota_aprobacion: '4.0',
+    exige_asistencia: false, porcentaje_asistencia_minima: '70',
     apuntes: '# Apuntes de Clase', prerrequisitos: [], grupos: [], archivos: []
   })
 
@@ -33,15 +33,15 @@ export default function ModalRamo() {
         nombre: ramoSeleccionado.nombre || '', 
         color: ramoSeleccionado.color || '#3b82f6',
         estado: ramoSeleccionado.estado || 'pendiente', 
-        creditos: ramoSeleccionado.creditos ?? 5,
-        nota_final: ramoSeleccionado.nota_final ?? 4.0, 
-        fecha_inicio: ramoSeleccionado.fecha_inicio || '', // Fix warning de control React
-        fecha_fin: ramoSeleccionado.fecha_fin || '', // Fix warning de control React
+        creditos: String(ramoSeleccionado.creditos ?? 5),
+        nota_final: String(ramoSeleccionado.nota_final ?? 4.0), 
+        fecha_inicio: ramoSeleccionado.fecha_inicio || '', 
+        fecha_fin: ramoSeleccionado.fecha_fin || '', 
         permite_eximicion: ramoSeleccionado.permite_eximicion || false,
-        nota_eximicion: ramoSeleccionado.nota_eximicion || 5.5, 
-        nota_aprobacion: ramoSeleccionado.nota_aprobacion || 4.0,
+        nota_eximicion: String(ramoSeleccionado.nota_eximicion ?? 5.5), 
+        nota_aprobacion: String(ramoSeleccionado.nota_aprobacion ?? 4.0),
         exige_asistencia: ramoSeleccionado.exige_asistencia || false,
-        porcentaje_asistencia_minima: ramoSeleccionado.porcentaje_asistencia_minima || 70,
+        porcentaje_asistencia_minima: String(ramoSeleccionado.porcentaje_asistencia_minima ?? 70),
         apuntes: ramoSeleccionado.apuntes || '# Apuntes de Clase',
         prerrequisitos: ramoSeleccionado.prerrequisitos?.filter(id => ramos.some(r => r.id === id)) || [],
         grupos: ramoSeleccionado.grupos || [],
@@ -69,9 +69,14 @@ export default function ModalRamo() {
     if (activarSimulador && porcentajeRestante > 0) notaFinalSimulada += (notaHipotetica * (porcentajeRestante / 100))
 
     let notaFaltanteEximicion = null; let notaFaltanteAprobacion = null
+    
+    // Parseo rápido para matemática interna de la UI
+    const numEximicion = parseFloat(formData.nota_eximicion) || 0
+    const numAprobacion = parseFloat(formData.nota_aprobacion) || 0
+    
     if (porcentajeRestante > 0) {
-      if (formData.permite_eximicion) notaFaltanteEximicion = (formData.nota_eximicion - notaAcumulada) / (porcentajeRestante / 100)
-      notaFaltanteAprobacion = (formData.nota_aprobacion - notaAcumulada) / (porcentajeRestante / 100)
+      if (formData.permite_eximicion) notaFaltanteEximicion = (numEximicion - notaAcumulada) / (porcentajeRestante / 100)
+      notaFaltanteAprobacion = (numAprobacion - notaAcumulada) / (porcentajeRestante / 100)
     }
     return { notaAcumulada, notaFinalSimulada: activarSimulador ? notaFinalSimulada : notaAcumulada, porcentajeEvaluado, porcentajeRestante, notaFaltanteEximicion, notaFaltanteAprobacion }
   }
@@ -82,8 +87,14 @@ export default function ModalRamo() {
     try {
       setGuardando(true)
 
+      // FIX: Parseo seguro a número antes de enviar a BD
       const datosParaBD = {
         ...formData,
+        nota_final: parseFloat(formData.nota_final) || 0,
+        creditos: parseInt(formData.creditos) || 0,
+        nota_eximicion: parseFloat(formData.nota_eximicion) || 0,
+        nota_aprobacion: parseFloat(formData.nota_aprobacion) || 0,
+        porcentaje_asistencia_minima: parseInt(formData.porcentaje_asistencia_minima) || 0,
         fecha_inicio: formData.fecha_inicio && formData.fecha_inicio.trim() !== '' ? formData.fecha_inicio : null,
         fecha_fin: formData.fecha_fin && formData.fecha_fin.trim() !== '' ? formData.fecha_fin : null,
       }
@@ -105,7 +116,6 @@ export default function ModalRamo() {
   const handleBorrar = async () => {
     if (!window.confirm("¿Estás seguro de eliminar este ramo por completo?")) return
     try {
-      // FIX Fuga de memoria: Eliminar los archivos físicos subidos por este ramo antes de borrarlo.
       if (formData.archivos && formData.archivos.length > 0) {
         const rutasParaBorrar = formData.archivos.map(a => a.ruta)
         await supabase.storage.from('material_estudio').remove(rutasParaBorrar)
@@ -125,8 +135,6 @@ export default function ModalRamo() {
   const agregarNota = (grupoId) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, notas: [...g.notas, { id: Date.now(), calificacion: "4.0" }] } : g) })
   const actualizarNombreGrupo = (grupoId, nombre) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, nombre } : g) })
   const actualizarPonderacionGrupo = (grupoId, ponderacion) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, ponderacion: Number(ponderacion) || 0 } : g) })
-  
-  // FIX BUG DECIMAL: Dejar la calificación como String para no borrar los puntos al escribir.
   const actualizarCalificacionNota = (grupoId, notaId, calificacion) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, notas: g.notas.map(n => n.id === notaId ? { ...n, calificacion: calificacion } : n) } : g) })
 
   const togglePrerrequisito = (idRamo) => {
@@ -163,7 +171,6 @@ export default function ModalRamo() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-slate-900 mb-2 flex items-center gap-1"><Tag size={14}/> Categoría</label>
-                    {/* FIX DROPDOWN: Valor controlado para que siempre muestre la categoría guardada */}
                     <select value={categorias.find(c => c.color === formData.color)?.nombre || ""} onChange={(e) => { const cat = categorias.find(c => c.nombre === e.target.value); if (cat) setFormData({...formData, color: cat.color}) }} className="w-full border-2 border-slate-300 rounded-lg p-2.5 outline-none bg-white text-slate-900 font-bold text-sm">
                       <option value="">Seleccionar...</option>
                       {categorias.map(cat => <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>)}
@@ -183,11 +190,13 @@ export default function ModalRamo() {
               <div className="grid grid-cols-2 gap-6 bg-blue-50/50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
                 <div>
                   <label className="block text-xs font-bold text-blue-900 mb-1 uppercase flex items-center gap-1"><Award size={14}/> Créditos (SCT)</label>
-                  <input type="number" min="0" value={formData.creditos} onChange={(e) => setFormData({...formData, creditos: parseInt(e.target.value) || 0})} className="w-full border-2 border-blue-200 rounded-lg p-2.5 font-bold text-slate-900 bg-white outline-none" />
+                  {/* FIX: Mantenemos el estado en String para que no borre puntos/comas */}
+                  <input type="text" value={formData.creditos} onChange={(e) => setFormData({...formData, creditos: e.target.value})} className="w-full border-2 border-blue-200 rounded-lg p-2.5 font-bold text-slate-900 bg-white outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-blue-900 mb-1 uppercase">Nota Final (PPA)</label>
-                  <input type="number" step="0.1" min="0" max="7.0" value={formData.nota_final} onChange={(e) => setFormData({...formData, nota_final: parseFloat(e.target.value) || 0})} className="w-full border-2 border-blue-200 rounded-lg p-2.5 font-bold text-slate-900 bg-white outline-none" />
+                  {/* FIX: Mantenemos el estado en String */}
+                  <input type="text" value={formData.nota_final} onChange={(e) => setFormData({...formData, nota_final: e.target.value})} className="w-full border-2 border-blue-200 rounded-lg p-2.5 font-bold text-slate-900 bg-white outline-none" />
                 </div>
               </div>
 
@@ -221,7 +230,7 @@ export default function ModalRamo() {
                     {formData.permite_eximicion && (
                       <div className="pl-7">
                         <label className="block text-xs font-bold text-slate-500 mb-1">Nota requerida</label>
-                        <input type="number" step="0.1" value={formData.nota_eximicion} onChange={(e) => setFormData({...formData, nota_eximicion: parseFloat(e.target.value) || 0})} className="w-24 border-2 border-slate-300 rounded p-1.5 text-sm font-bold text-slate-900" />
+                        <input type="text" value={formData.nota_eximicion} onChange={(e) => setFormData({...formData, nota_eximicion: e.target.value})} className="w-24 border-2 border-slate-300 rounded p-1.5 text-sm font-bold text-slate-900" />
                       </div>
                     )}
                   </div>
@@ -233,7 +242,7 @@ export default function ModalRamo() {
                     {formData.exige_asistencia && (
                       <div className="pl-7">
                         <label className="block text-xs font-bold text-slate-500 mb-1">Mínimo (%)</label>
-                        <input type="number" value={formData.porcentaje_asistencia_minima} onChange={(e) => setFormData({...formData, porcentaje_asistencia_minima: parseInt(e.target.value) || 0})} className="w-24 border-2 border-slate-300 rounded p-1.5 text-sm font-bold text-slate-900" />
+                        <input type="text" value={formData.porcentaje_asistencia_minima} onChange={(e) => setFormData({...formData, porcentaje_asistencia_minima: e.target.value})} className="w-24 border-2 border-slate-300 rounded p-1.5 text-sm font-bold text-slate-900" />
                       </div>
                     )}
                   </div>
@@ -336,11 +345,14 @@ export default function ModalRamo() {
                     <div key={idx} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
                        <a href={archivo.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-2"><FolderOpen size={16}/> {archivo.nombre}</a>
                        
-                       {/* FIX: Eliminar el archivo de Storage cuando el usuario presiona la papelera */}
                        <button onClick={async () => {
                          if(window.confirm("¿Seguro que deseas borrar permanentemente este archivo?")) {
                            await supabase.storage.from('material_estudio').remove([archivo.ruta]);
-                           setFormData({...formData, archivos: formData.archivos.filter((_, i) => i !== idx)});
+                           
+                           // FIX: Sincronización instantánea de DB al borrar
+                           const archivosRestantes = formData.archivos.filter((_, i) => i !== idx);
+                           setFormData({...formData, archivos: archivosRestantes});
+                           await supabase.from('ramos').update({ archivos: archivosRestantes }).eq('id', ramoSeleccionado.id);
                          }
                        }} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
 
@@ -365,7 +377,10 @@ export default function ModalRamo() {
                       const { data: { publicUrl } } = supabase.storage.from('material_estudio').getPublicUrl(ruta);
                       
                       const nuevosArchivos = [...(formData.archivos || []), { nombre: file.name, url: publicUrl, ruta: ruta }];
+                      
+                      // FIX: Sincronización instantánea de DB al subir
                       setFormData({ ...formData, archivos: nuevosArchivos });
+                      await supabase.from('ramos').update({ archivos: nuevosArchivos }).eq('id', ramoSeleccionado.id);
                     }} 
                   />
                 </label>

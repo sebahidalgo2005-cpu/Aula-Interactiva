@@ -3,7 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
+    // FIX: Se agregó el 'await' necesario para Next.js 15+
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

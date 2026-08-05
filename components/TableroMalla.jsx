@@ -55,7 +55,8 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
   )
 }
 
-function RamoCard({ ramo }) {
+// FIX: Pasamos el prop 'dragActivo' para que todos sepan que se está moviendo algo en la pizarra
+function RamoCard({ ramo, dragActivo }) {
   const { setRamoSeleccionado, ramoEnFoco, setRamoEnFoco, ramos } = useMallaStore()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ramo.id })
   
@@ -76,20 +77,21 @@ function RamoCard({ ramo }) {
       setNodeRef={setNodeRef}
       attributes={attributes}
       listeners={listeners}
-      onPointerEnter={() => !isDragging && setRamoEnFoco(ramo.id)}
-      onPointerLeave={() => !isDragging && setRamoEnFoco(null)}
+      // FIX PERFORMANCE: Bloqueamos los hover si hay algún objeto en el aire
+      onPointerEnter={() => { if (!dragActivo && !isDragging) setRamoEnFoco(ramo.id) }}
+      onPointerLeave={() => { if (!dragActivo && !isDragging) setRamoEnFoco(null) }}
       onClick={() => setRamoSeleccionado(ramo)}
     />
   )
 }
 
-function CeldaMalla({ sem, fila, ramo, handleNuevoRamo }) {
+function CeldaMalla({ sem, fila, ramo, handleNuevoRamo, dragActivo }) {
   const { setNodeRef, isOver } = useDroppable({ id: `celda-${sem}-${fila}` })
 
   return (
     <div ref={setNodeRef} className={`relative h-24 mb-4 rounded-xl transition-all border-2 ${isOver && !ramo ? 'bg-blue-100/50 border-blue-400 scale-105 z-10 shadow-lg' : 'border-transparent'} ${!ramo ? 'hover:border-slate-300' : ''}`}>
       {ramo ? (
-        <RamoCard ramo={ramo} />
+        <RamoCard ramo={ramo} dragActivo={dragActivo} />
       ) : (
         <button onClick={() => handleNuevoRamo(sem, fila)} className="absolute inset-0 w-full h-full rounded-xl border-2 border-slate-300 border-dashed bg-white/40 hover:bg-white hover:border-blue-500 flex items-center justify-center text-slate-300 hover:text-blue-600 transition-colors shadow-sm">
           <Plus size={32} strokeWidth={2.5} />
@@ -107,7 +109,6 @@ export default function TableroMalla() {
   
   useEffect(() => setMounted(true), [])
 
-  // Optimización O(1): Construcción de Mapa indexado por coordenadas
   const mallaMap = useMemo(() => {
     const map = new Map()
     ramos.forEach(r => {
@@ -185,7 +186,14 @@ export default function TableroMalla() {
               {filasArray.map((fila) => {
                 const ramoEnEstaCelda = mallaMap.get(`${sem}-${fila}`)
                 return (
-                  <CeldaMalla key={`celda-${sem}-${fila}`} sem={sem} fila={fila} ramo={ramoEnEstaCelda} handleNuevoRamo={handleNuevoRamo} />
+                  <CeldaMalla 
+                    key={`celda-${sem}-${fila}`} 
+                    sem={sem} 
+                    fila={fila} 
+                    ramo={ramoEnEstaCelda} 
+                    handleNuevoRamo={handleNuevoRamo} 
+                    dragActivo={activeId !== null} // FIX: Informa si algo está volando en la malla
+                  />
                 )
               })}
             </div>

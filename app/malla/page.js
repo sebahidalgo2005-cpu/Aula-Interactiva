@@ -14,7 +14,8 @@ export default function MallaPage() {
   const supabase = createClient()
   const router = useRouter()
   
-  const { ramos, setRamos, modificarSemestres, modificarFilas, setModalCategoriasAbierto } = useMallaStore()
+  // FIX: Agregamos setHorarios para extraerlos de la base de datos al inicio
+  const { ramos, setRamos, setHorarios, modificarSemestres, modificarFilas, setModalCategoriasAbierto } = useMallaStore()
   
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
@@ -29,10 +30,16 @@ export default function MallaPage() {
         if (authError || !user) return router.push('/')
         if (estaMontado) setUser(user)
 
+        // FIX: Cargar tanto Ramos como Horarios para no perderlos al recargar
         const { data: ramosDB, error: dbError } = await supabase.from('ramos').select('*').eq('usuario_id', user.id)
+        const { data: horariosDB } = await supabase.from('horarios').select('*').eq('usuario_id', user.id)
+
         if (dbError) throw dbError
 
-        if (estaMontado && ramosDB && Array.isArray(ramosDB)) setRamos(ramosDB)
+        if (estaMontado) {
+          if (ramosDB && Array.isArray(ramosDB)) setRamos(ramosDB)
+          if (horariosDB && Array.isArray(horariosDB)) setHorarios(horariosDB)
+        }
       } catch (error) {
         console.error("Error al cargar la malla:", error)
       } finally {
@@ -41,7 +48,7 @@ export default function MallaPage() {
     }
     cargarDatos()
     return () => { estaMontado = false }
-  }, [router, setRamos])
+  }, [router, setRamos, setHorarios]) // <- dependencias actualizadas
 
   // --- EXPORTAR A PNG (Corregido para Mallas Grandes) ---
   const exportarMalla = async () => {
@@ -50,13 +57,21 @@ export default function MallaPage() {
       const elementoMalla = document.getElementById('contenedor-malla')
       if (!elementoMalla) return
       
+      // FIX VISUAL: Quitar overflow temporalmente para capturar la malla completa
+      const oldOverflow = elementoMalla.style.overflow;
+      elementoMalla.style.overflow = 'visible';
+      
       const canvas = await html2canvas(elementoMalla, { 
         scale: 2, 
         backgroundColor: '#f8fafc', 
         useCORS: true,
-        windowWidth: elementoMalla.scrollWidth, // <-- Fix aplicado
-        windowHeight: elementoMalla.scrollHeight // <-- Fix aplicado
+        windowWidth: elementoMalla.scrollWidth,
+        windowHeight: Math.max(elementoMalla.scrollHeight, window.innerHeight)
       })
+
+      // Restaurar estilos
+      elementoMalla.style.overflow = oldOverflow;
+
       const enlace = document.createElement('a')
       enlace.download = 'Mi_Malla_Academica.png'
       enlace.href = canvas.toDataURL('image/png')
