@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { useMallaStore } from '@/store/useMallaStore'
 import { createClient } from '@/utils/supabase/client'
-// 👇 AQUÍ ESTÁ EL ARREGLO: Agregamos UploadCloud al final de esta línea
 import { X, Trash2, Save, Plus, BookOpen, Calculator, FolderOpen, AlertCircle, Edit3, Eye, Tag, Sliders, Lock, Key, CalendarRange, Award, UploadCloud } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
@@ -36,8 +35,8 @@ export default function ModalRamo() {
         estado: ramoSeleccionado.estado || 'pendiente', 
         creditos: ramoSeleccionado.creditos ?? 5,
         nota_final: ramoSeleccionado.nota_final ?? 4.0, 
-        fecha_inicio: ramoSeleccionado.fecha_inicio || '', 
-        fecha_fin: ramoSeleccionado.fecha_fin || '', 
+        fecha_inicio: ramoSeleccionado.fecha_inicio || '', // Fix warning de control React
+        fecha_fin: ramoSeleccionado.fecha_fin || '', // Fix warning de control React
         permite_eximicion: ramoSeleccionado.permite_eximicion || false,
         nota_eximicion: ramoSeleccionado.nota_eximicion || 5.5, 
         nota_aprobacion: ramoSeleccionado.nota_aprobacion || 4.0,
@@ -91,40 +90,44 @@ export default function ModalRamo() {
 
       actualizarRamo(ramoSeleccionado.id, datosParaBD)
 
-      const { error } = await supabase
-        .from('ramos')
-        .update(datosParaBD)
-        .eq('id', ramoSeleccionado.id)
-
+      const { error } = await supabase.from('ramos').update(datosParaBD).eq('id', ramoSeleccionado.id)
       if (error) throw error
 
       setRamoSeleccionado(null)
     } catch (error) {
       console.error("Error al guardar en Supabase:", error)
-      alert(`Error al guardar en la base de datos:\n${error.message || 'Comprueba tu conexión o la estructura de la tabla en Supabase.'}`)
+      alert(`Error al guardar en la base de datos:\n${error.message}`)
     } finally {
       setGuardando(false)
     }
   }
 
   const handleBorrar = async () => {
-    if (!window.confirm("¿Estás seguro de eliminar este ramo?")) return
+    if (!window.confirm("¿Estás seguro de eliminar este ramo por completo?")) return
     try {
+      // FIX Fuga de memoria: Eliminar los archivos físicos subidos por este ramo antes de borrarlo.
+      if (formData.archivos && formData.archivos.length > 0) {
+        const rutasParaBorrar = formData.archivos.map(a => a.ruta)
+        await supabase.storage.from('material_estudio').remove(rutasParaBorrar)
+      }
+
       eliminarRamo(ramoSeleccionado.id)
       const { error } = await supabase.from('ramos').delete().eq('id', ramoSeleccionado.id)
       if (error) throw error
       setRamoSeleccionado(null)
     } catch (error) {
       console.error("Error al borrar el ramo:", error)
-      alert(`Error al eliminar el ramo:\n${error.message || 'Error desconocido'}`)
+      alert(`Error al eliminar el ramo:\n${error.message}`)
     }
   }
 
   const agregarGrupo = () => setFormData({ ...formData, grupos: [...formData.grupos, { id: Date.now(), nombre: 'Nuevo Grupo', ponderacion: 0, notas: [] }] })
-  const agregarNota = (grupoId) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, notas: [...g.notas, { id: Date.now(), calificacion: 4.0 }] } : g) })
+  const agregarNota = (grupoId) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, notas: [...g.notas, { id: Date.now(), calificacion: "4.0" }] } : g) })
   const actualizarNombreGrupo = (grupoId, nombre) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, nombre } : g) })
   const actualizarPonderacionGrupo = (grupoId, ponderacion) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, ponderacion: Number(ponderacion) || 0 } : g) })
-  const actualizarCalificacionNota = (grupoId, notaId, calificacion) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, notas: g.notas.map(n => n.id === notaId ? { ...n, calificacion: Number(calificacion) || 0 } : n) } : g) })
+  
+  // FIX BUG DECIMAL: Dejar la calificación como String para no borrar los puntos al escribir.
+  const actualizarCalificacionNota = (grupoId, notaId, calificacion) => setFormData({ ...formData, grupos: formData.grupos.map(g => g.id === grupoId ? { ...g, notas: g.notas.map(n => n.id === notaId ? { ...n, calificacion: calificacion } : n) } : g) })
 
   const togglePrerrequisito = (idRamo) => {
     const existe = formData.prerrequisitos.includes(idRamo)
@@ -160,7 +163,8 @@ export default function ModalRamo() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-slate-900 mb-2 flex items-center gap-1"><Tag size={14}/> Categoría</label>
-                    <select onChange={(e) => { const cat = categorias.find(c => c.nombre === e.target.value); if (cat) setFormData({...formData, color: cat.color}) }} className="w-full border-2 border-slate-300 rounded-lg p-2.5 outline-none bg-white text-slate-900 font-bold text-sm">
+                    {/* FIX DROPDOWN: Valor controlado para que siempre muestre la categoría guardada */}
+                    <select value={categorias.find(c => c.color === formData.color)?.nombre || ""} onChange={(e) => { const cat = categorias.find(c => c.nombre === e.target.value); if (cat) setFormData({...formData, color: cat.color}) }} className="w-full border-2 border-slate-300 rounded-lg p-2.5 outline-none bg-white text-slate-900 font-bold text-sm">
                       <option value="">Seleccionar...</option>
                       {categorias.map(cat => <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>)}
                     </select>
@@ -196,11 +200,11 @@ export default function ModalRamo() {
                   <div className="flex-1 flex gap-4">
                     <div className="flex-1">
                       <label className="block text-xs font-bold text-slate-700 mb-1">Inicio</label>
-                      <input type="date" value={formData.fecha_inicio} onChange={(e) => setFormData({...formData, fecha_inicio: e.target.value})} className="w-full border-2 border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-900 bg-white" />
+                      <input type="date" value={formData.fecha_inicio || ""} onChange={(e) => setFormData({...formData, fecha_inicio: e.target.value})} className="w-full border-2 border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-900 bg-white" />
                     </div>
                     <div className="flex-1">
                       <label className="block text-xs font-bold text-slate-700 mb-1">Fin</label>
-                      <input type="date" value={formData.fecha_fin} onChange={(e) => setFormData({...formData, fecha_fin: e.target.value})} className="w-full border-2 border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-900 bg-white" />
+                      <input type="date" value={formData.fecha_fin || ""} onChange={(e) => setFormData({...formData, fecha_fin: e.target.value})} className="w-full border-2 border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-900 bg-white" />
                     </div>
                   </div>
                 </div>
@@ -309,7 +313,7 @@ export default function ModalRamo() {
                       {grupo.notas.map((nota, nIndex) => (
                         <div key={nota.id} className="flex justify-between items-center bg-slate-100 p-3 rounded-lg border">
                           <span className="text-sm font-bold text-slate-700">Evaluación {nIndex + 1}</span>
-                          <input type="number" step="0.1" value={nota.calificacion} onChange={(e) => actualizarCalificacionNota(grupo.id, nota.id, e.target.value)} className="w-20 border-2 rounded p-1 font-mono text-center text-blue-700 font-extrabold" />
+                          <input type="text" value={nota.calificacion} onChange={(e) => actualizarCalificacionNota(grupo.id, nota.id, e.target.value)} className="w-20 border-2 rounded p-1 font-mono text-center text-blue-700 font-extrabold" />
                         </div>
                       ))}
                       <button onClick={() => agregarNota(grupo.id)} className="w-full text-sm text-blue-700 font-bold py-3 hover:bg-blue-50 rounded-lg transition mt-2">+ Añadir Calificación</button>
@@ -331,7 +335,15 @@ export default function ModalRamo() {
                   {formData.archivos?.length > 0 ? formData.archivos.map((archivo, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
                        <a href={archivo.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-2"><FolderOpen size={16}/> {archivo.nombre}</a>
-                       <button onClick={() => setFormData({...formData, archivos: formData.archivos.filter((_, i) => i !== idx)})} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
+                       
+                       {/* FIX: Eliminar el archivo de Storage cuando el usuario presiona la papelera */}
+                       <button onClick={async () => {
+                         if(window.confirm("¿Seguro que deseas borrar permanentemente este archivo?")) {
+                           await supabase.storage.from('material_estudio').remove([archivo.ruta]);
+                           setFormData({...formData, archivos: formData.archivos.filter((_, i) => i !== idx)});
+                         }
+                       }} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
+
                     </div>
                   )) : <p className="text-sm text-slate-500 font-medium">No hay archivos subidos aún.</p>}
                 </div>
@@ -348,7 +360,7 @@ export default function ModalRamo() {
                       const ruta = `${user.id}/${ramoSeleccionado.id}/${Date.now()}-${file.name}`;
                       
                       const { error: uploadError } = await supabase.storage.from('material_estudio').upload(ruta, file);
-                      if (uploadError) return alert("Error al subir el archivo. Verifica que el Bucket 'material_estudio' exista en Supabase.");
+                      if (uploadError) return alert("Error al subir el archivo. Verifica que el Bucket 'material_estudio' exista en Supabase y tenga permisos.");
                       
                       const { data: { publicUrl } } = supabase.storage.from('material_estudio').getPublicUrl(ruta);
                       

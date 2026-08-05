@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
+// Función segura para evitar crasheos de SSR en Next.js
+const getStorage = () => typeof window !== 'undefined' ? window.localStorage : undefined
+
 export const useMallaStore = create(
   persist(
     (set, get) => ({
@@ -19,7 +22,6 @@ export const useMallaStore = create(
       numSemestres: 10,
       numFilas: 6,
 
-      // Setters Generales
       setRamos: (ramos) => set({ ramos: ramos || [] }),
       setHorarios: (horarios) => set({ horarios: horarios || [] }),
       setRamoSeleccionado: (ramo) => set({ ramoSeleccionado: ramo }),
@@ -27,7 +29,6 @@ export const useMallaStore = create(
       setCategorias: (categorias) => set({ categorias: categorias || [] }),
       setModalCategoriasAbierto: (isOpen) => set({ modalCategoriasAbierto: isOpen }),
 
-      // Control Persistente de la Cuadrícula
       modificarSemestres: (cantidad) => set((state) => ({
         numSemestres: Math.max(1, state.numSemestres + cantidad)
       })),
@@ -35,7 +36,6 @@ export const useMallaStore = create(
         numFilas: Math.max(1, state.numFilas + cantidad)
       })),
 
-      // Operaciones CRUD de Ramos
       agregarRamo: (ramo) => set((state) => ({ ramos: [...state.ramos, ramo] })),
       
       actualizarRamo: (id, data) => set((state) => ({
@@ -55,18 +55,17 @@ export const useMallaStore = create(
         } : r)
       })),
 
-      // Operaciones CRUD de Horarios
       agregarHorario: (horario) => set((state) => ({ horarios: [...state.horarios, horario] })),
       eliminarHorario: (id) => set((state) => ({ horarios: state.horarios.filter(h => h.id !== id) })),
     }),
     {
-      name: 'malla-interactiva-storage', // Clave en localStorage
-      storage: createJSONStorage(() => localStorage),
+      name: 'malla-interactiva-storage',
+      storage: createJSONStorage(getStorage),
       partialize: (state) => ({ 
         numSemestres: state.numSemestres, 
         numFilas: state.numFilas, 
         categorias: state.categorias 
-      }), // Solo persiste la configuración y las categorías
+      }),
     }
   )
 )

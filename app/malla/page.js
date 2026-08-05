@@ -6,7 +6,6 @@ import TableroMalla from '@/components/TableroMalla'
 import ModalGestorCategorias from '@/components/ModalGestorCategorias'
 import ModalRamo from '@/components/ModalRamo'
 import { useMallaStore } from '@/store/useMallaStore'
-// Importamos todos los iconos nuevamente, incluyendo el Calendario
 import { Settings, Plus, Minus, LogOut, Link as LinkIcon, Calendar as CalendarIcon, LayoutDashboard, TrendingUp, Download, Share2, UploadCloud } from 'lucide-react'
 import Link from 'next/link'
 import html2canvas from 'html2canvas' 
@@ -44,14 +43,20 @@ export default function MallaPage() {
     return () => { estaMontado = false }
   }, [router, setRamos])
 
-  // --- FUNCIÓN: EXPORTAR A PNG ---
+  // --- EXPORTAR A PNG (Corregido para Mallas Grandes) ---
   const exportarMalla = async () => {
     setExportando(true)
     try {
       const elementoMalla = document.getElementById('contenedor-malla')
       if (!elementoMalla) return
       
-      const canvas = await html2canvas(elementoMalla, { scale: 2, backgroundColor: '#f8fafc', useCORS: true })
+      const canvas = await html2canvas(elementoMalla, { 
+        scale: 2, 
+        backgroundColor: '#f8fafc', 
+        useCORS: true,
+        windowWidth: elementoMalla.scrollWidth, // <-- Fix aplicado
+        windowHeight: elementoMalla.scrollHeight // <-- Fix aplicado
+      })
       const enlace = document.createElement('a')
       enlace.download = 'Mi_Malla_Academica.png'
       enlace.href = canvas.toDataURL('image/png')
@@ -63,7 +68,6 @@ export default function MallaPage() {
     }
   }
 
-  // --- FUNCIÓN: COMPARTIR PLANTILLA ---
   const compartirMalla = () => {
     const mallaLimpia = ramos.map(({ id, usuario_id, ...resto }) => resto)
     const mallaJSON = JSON.stringify(mallaLimpia)
@@ -103,15 +107,12 @@ export default function MallaPage() {
           <Link href="/rendimiento" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700 mt-2">
             <TrendingUp size={16} className="text-emerald-400" /> Rendimiento & PPA
           </Link>
-          
-          {/* AQUÍ ESTÁN RESTAURADOS TUS ENLACES DE EVALUACIONES Y CALENDARIO */}
           <Link href="/evaluaciones" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700 mt-2">
             <CalendarIcon size={16} className="text-amber-400" /> Pruebas y Tareas
           </Link>
           <Link href="/calendario" className="w-full flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold shadow-md shadow-blue-500/20 mt-2">
             <CalendarIcon size={16} /> Horario y Asistencia
           </Link>
-
 
           <h3 className="text-xs font-bold text-slate-400 mt-6 mb-3 tracking-widest uppercase">Herramientas Pro</h3>
           <button onClick={exportarMalla} disabled={exportando} className="w-full flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-sm py-2.5 px-4 rounded-md text-left transition text-white font-bold shadow-md">
