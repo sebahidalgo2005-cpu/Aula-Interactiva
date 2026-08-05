@@ -320,24 +320,66 @@ export default function ModalRamo() {
             </div>
           )}
 
-          {tab === 'archivos' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center bg-slate-200 p-2 rounded-xl">
-                <span className="text-xs font-extrabold text-slate-700 uppercase pl-2">Editor Markdown & LaTeX</span>
-                <div className="flex gap-2">
-                  <button onClick={() => setModoEdicionApuntes(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${modoEdicionApuntes ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}><Edit3 size={14} /> Editar</button>
-                  <button onClick={() => setModoEdicionApuntes(false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${!modoEdicionApuntes ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}><Eye size={14} /> Vista Previa</button>
-                </div>
-              </div>
-              {modoEdicionApuntes ? (
-                <textarea value={formData.apuntes} onChange={(e) => setFormData({...formData, apuntes: e.target.value})} className="w-full h-96 p-4 font-mono text-sm border-2 border-slate-300 rounded-xl outline-none text-slate-900 bg-white" />
-              ) : (
-                <div className="w-full h-96 p-6 border-2 border-slate-300 rounded-xl bg-white overflow-y-auto prose max-w-none text-slate-900">
-                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{formData.apuntes}</ReactMarkdown>
-                </div>
-              )}
-            </div>
-          )}
+          {/* DENTRO DE components/ModalRamo.jsx - PESTAÑA AULA VIRTUAL */}
+{tab === 'archivos' && (
+  <div className="space-y-6">
+    
+    {/* NUEVO: SECCIÓN DE SUBIDA DE ARCHIVOS A SUPABASE */}
+    <div className="bg-white p-5 rounded-xl border-2 border-slate-200 shadow-sm">
+      <h3 className="font-extrabold text-slate-900 mb-4 flex items-center gap-2"><UploadCloud size={18} className="text-blue-600"/> Material de Estudio (PDF, DOCX, PPT)</h3>
+      
+      <div className="space-y-3 mb-4">
+        {formData.archivos?.length > 0 ? formData.archivos.map((archivo, idx) => (
+          <div key={idx} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+             <a href={archivo.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-2"><FolderOpen size={16}/> {archivo.nombre}</a>
+             <button onClick={() => setFormData({...formData, archivos: formData.archivos.filter((_, i) => i !== idx)})} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
+          </div>
+        )) : <p className="text-sm text-slate-500 font-medium">No hay archivos subidos aún.</p>}
+      </div>
+
+      <label className="w-full flex justify-center items-center gap-2 border-2 border-dashed border-blue-400 text-blue-600 py-3 rounded-xl hover:bg-blue-50 cursor-pointer transition font-bold cursor-pointer">
+        <UploadCloud size={20} /> Subir Archivo Nuevo
+        <input 
+          type="file" 
+          className="hidden" 
+          onChange={async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const { data: { user } } = await supabase.auth.getUser();
+            const ruta = `${user.id}/${ramoSeleccionado.id}/${Date.now()}-${file.name}`;
+            
+            // Subida a Supabase Storage (Bucket: material_estudio)
+            const { error: uploadError } = await supabase.storage.from('material_estudio').upload(ruta, file);
+            if (uploadError) return alert("Error al subir el archivo. Verifica que el Bucket 'material_estudio' exista en Supabase.");
+            
+            // Obtener URL Pública
+            const { data: { publicUrl } } = supabase.storage.from('material_estudio').getPublicUrl(ruta);
+            
+            // Guardar en el estado local
+            const nuevosArchivos = [...(formData.archivos || []), { nombre: file.name, url: publicUrl, ruta: ruta }];
+            setFormData({ ...formData, archivos: nuevosArchivos });
+          }} 
+        />
+      </label>
+    </div>
+
+    {/* EDITOR MARKDOWN (Lo que ya tenías) */}
+    <div className="flex justify-between items-center bg-slate-200 p-2 rounded-xl mt-6">
+      <span className="text-xs font-extrabold text-slate-700 uppercase pl-2">Editor Markdown & LaTeX</span>
+      <div className="flex gap-2">
+        <button onClick={() => setModoEdicionApuntes(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${modoEdicionApuntes ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}><Edit3 size={14} /> Editar</button>
+        <button onClick={() => setModoEdicionApuntes(false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${!modoEdicionApuntes ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}><Eye size={14} /> Vista Previa</button>
+      </div>
+    </div>
+    {modoEdicionApuntes ? (
+      <textarea value={formData.apuntes} onChange={(e) => setFormData({...formData, apuntes: e.target.value})} className="w-full h-96 p-4 font-mono text-sm border-2 border-slate-300 rounded-xl outline-none text-slate-900 bg-white" />
+    ) : (
+      <div className="w-full h-96 p-6 border-2 border-slate-300 rounded-xl bg-white overflow-y-auto prose max-w-none text-slate-900">
+        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{formData.apuntes}</ReactMarkdown>
+      </div>
+    )}
+  </div>
+)}
 
         </div>
 
