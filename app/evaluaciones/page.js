@@ -8,6 +8,7 @@ import { useMallaStore } from '@/store/useMallaStore'
 
 // Forzar la fecha local del usuario para evitar desfaces UTC al inicializar el input
 const formatFechaLocal = (d) => {
+  if (!d) return ''
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -22,14 +23,18 @@ export default function EvaluacionesPage() {
   const [evaluaciones, setEvaluaciones] = useState([])
   const [guardando, setGuardando] = useState(false)
   
+  // Corrección 1: Fecha vacía para evitar Hydration Error del servidor
   const [form, setForm] = useState({
     ramo_id: '', 
     titulo: '', 
-    fecha_entrega: formatFechaLocal(new Date()), 
+    fecha_entrega: '', 
     tipo: 'prueba'
   })
 
   useEffect(() => {
+    // Asignación segura en el cliente (navegador)
+    setForm(f => ({ ...f, fecha_entrega: formatFechaLocal(new Date()) }))
+
     const cargarDatos = async () => {
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error || !user) return router.push('/')
@@ -80,11 +85,16 @@ export default function EvaluacionesPage() {
     }
   }
 
+  // Corrección 2: UI Optimista (con reversión de errores)
   const toggleCompletada = async (id, estadoActual) => {
+    const nuevoEstado = !estadoActual
+    const estadoPrevio = [...evaluaciones] // Guarda backup visual
+    
     try {
-      const nuevoEstado = !estadoActual
+      // 1. Actualización instantánea en UI
       setEvaluaciones(evaluaciones.map(ev => ev.id === id ? { ...ev, completada: nuevoEstado } : ev))
       
+      // 2. Intento en BD
       const { error } = await supabase
         .from('evaluaciones')
         .update({ completada: nuevoEstado })
@@ -93,27 +103,31 @@ export default function EvaluacionesPage() {
       if (error) throw error
     } catch (error) {
       console.error(error)
-      alert("No se pudo actualizar el estado de la tarea.")
+      // 3. Rollback si falla
+      setEvaluaciones(estadoPrevio)
+      alert("No se pudo actualizar el estado de la tarea. Se han revertido los cambios.")
     }
   }
 
   const handleEliminar = async (id) => {
     if (!window.confirm("¿Seguro que quieres eliminar esta evaluación?")) return
+    const estadoPrevio = [...evaluaciones] 
+    
     try {
       setEvaluaciones(evaluaciones.filter(ev => ev.id !== id))
       const { error } = await supabase.from('evaluaciones').delete().eq('id', id)
       if (error) throw error
     } catch (error) {
       console.error(error)
-      alert("Error al eliminar el registro.")
+      setEvaluaciones(estadoPrevio)
+      alert("Error al eliminar el registro. Se han revertido los cambios.")
     }
   }
 
-  // Calculador de días restantes usando fechas locales para evitar brincos temporales
+  // Calculador de días restantes
   const getDiasRestantes = (fechaStr) => {
     const hoy = new Date()
     hoy.setHours(0,0,0,0)
-    // El string de base de datos asume mediodía para evitar problemas de UTC
     const entrega = new Date(fechaStr + 'T12:00:00')
     entrega.setHours(0,0,0,0)
     

@@ -9,7 +9,7 @@ const supabase = createClient(
 )
 
 export async function GET(request, { params }) {
-  const { usuario_id } = params
+  const { usuario_id } = await params // Corrección 1: await params obligatorio
 
   try {
     // 1. Consultar a la DB todos los ramos y horarios del usuario en cuestión
@@ -40,7 +40,7 @@ export async function GET(request, { params }) {
 
     // 3. Iterar cada ramo en estado "Cursando" para agregar sus eventos recurrentes
     ramos.forEach(ramo => {
-      // Ignorar ramos que no tienen tramo de fechas definidos (para no crear eventos infinitos)
+      // Ignorar ramos que no tienen tramo de fechas definidos
       if (!ramo.fecha_inicio || !ramo.fecha_fin) return
       
       const fFin = ramo.fecha_fin.replace(/-/g, '') + 'T235959Z'
@@ -70,8 +70,8 @@ export async function GET(request, { params }) {
 
     ics += "END:VCALENDAR"
 
-    // 4. Retornar el archivo virtual en el formato webcal estandarizado
-    return new NextResponse(ics, {
+    // Corrección 2: Reemplazar \n por \r\n para cumplir especificación mundial RFC 5545
+    return new NextResponse(ics.replace(/\n/g, '\r\n'), {
       status: 200,
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',

@@ -50,9 +50,12 @@ export default function CalendarioIntegradoPage() {
   
   const [loading, setLoading] = useState(true)
   const [pestañaActiva, setPestañaActiva] = useState('semana') 
-  const [lunesSemana, setLunesSemana] = useState(getLunesActual())
+  
+  // Corrección 1: Empiezan vacíos (null) para evitar Hydration Error
+  const [lunesSemana, setLunesSemana] = useState(null)
+  const [horaActual, setHoraActual] = useState(null)
+  
   const [modalAsistencia, setModalAsistencia] = useState(null)
-  const [horaActual, setHoraActual] = useState(new Date())
   const [usuarioId, setUsuarioId] = useState(null)
   const [guardando, setGuardando] = useState(false)
   
@@ -61,6 +64,10 @@ export default function CalendarioIntegradoPage() {
   })
 
   useEffect(() => {
+    // Llenamos las fechas solo en el cliente
+    setLunesSemana(getLunesActual())
+    setHoraActual(new Date())
+
     const cargarDatos = async () => {
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error || !user) return router.push('/')
@@ -127,20 +134,23 @@ export default function CalendarioIntegradoPage() {
     }
   }
 
-  const diasDeLaSemanaActual = DIAS_SEMANA.map((dia, index) => {
-    const fObj = new Date(lunesSemana)
-    fObj.setDate(lunesSemana.getDate() + index)
-    return { ...dia, fechaObj: fObj, fechaStr: formatFechaLocal(fObj) }
-  })
-
+  // Corrección 2: UI Optimista y Prevención de Crash (.find)
   const guardarAsistencia = async (estado) => {
     if (!modalAsistencia) return
     const { ramoId, fechaStr, horarioId } = modalAsistencia
     
+    // 1. Previene crash si el ramo no fue encontrado
+    const ramoObjetivo = ramos.find(r => r.id === ramoId)
+    if (!ramoObjetivo) {
+      setModalAsistencia(null)
+      return
+    } 
+    
+    // 2. Guarda un backup del estado original
+    const asistenciaPrevia = [...(ramoObjetivo.asistencia || [])]
+    
     try {
-      // Filtrar la asistencia para NO pisar otros bloques del mismo ramo en el mismo día
-      let nuevaAsistencia = [...(ramos.find(r => r.id === ramoId).asistencia || [])]
-        .filter(a => !(a.fecha === fechaStr && a.horario_id === horarioId))
+      let nuevaAsistencia = asistenciaPrevia.filter(a => !(a.fecha === fechaStr && a.horario_id === horarioId))
       
       if (estado !== 'borrar') {
         nuevaAsistencia.push({ 
@@ -151,7 +161,9 @@ export default function CalendarioIntegradoPage() {
         })
       }
       
+      // 3. Modifica la UI inmediatamente
       actualizarRamo(ramoId, { asistencia: nuevaAsistencia })
+      setModalAsistencia(null)
       
       const { error } = await supabase
         .from('ramos')
@@ -159,9 +171,10 @@ export default function CalendarioIntegradoPage() {
         .eq('id', ramoId)
         
       if (error) throw error
-      setModalAsistencia(null)
     } catch (error) {
       console.error(error)
+      // 4. Si falla, hace Rollback
+      actualizarRamo(ramoId, { asistencia: asistenciaPrevia })
       alert("No se pudo guardar la asistencia. Intenta nuevamente.")
     }
   }
@@ -180,9 +193,17 @@ export default function CalendarioIntegradoPage() {
     window.open(`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(urlApi)}`, '_blank')
   }
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-[#f1f5f9] font-bold text-xl">Cargando Agenda...</div>
+  // Prevenir que intente renderizar matemática si el cliente no ha montado las fechas aún
+  if (loading || !lunesSemana || !horaActual) {
+    return <div className="flex h-screen items-center justify-center bg-[#f1f5f9] font-bold text-xl">Cargando Agenda...</div>
+  }
 
-  // Lógica matemática para dibujar la línea roja de "Hora Actual"
+  const diasDeLaSemanaActual = DIAS_SEMANA.map((dia, index) => {
+    const fObj = new Date(lunesSemana)
+    fObj.setDate(lunesSemana.getDate() + index)
+    return { ...dia, fechaObj: fObj, fechaStr: formatFechaLocal(fObj) }
+  })
+
   const esSemanaActual = lunesSemana <= horaActual && (new Date(lunesSemana.getTime() + 7*24*60*60*1000)) > horaActual
   const diaActualIndex = horaActual.getDay() === 0 ? 6 : horaActual.getDay() - 1 
   const lineaRojaY = calcularPosicionY(`${horaActual.getHours()}:${horaActual.getMinutes()}`)
@@ -191,7 +212,6 @@ export default function CalendarioIntegradoPage() {
     <div className="min-h-screen bg-[#f1f5f9] p-8 font-sans">
       <div className="max-w-[1400px] mx-auto">
         
-        {/* HEADER */}
         <header className="mb-6 flex justify-between items-center">
           <Link href="/malla" className="flex items-center gap-2 text-slate-600 hover:text-blue-600 font-bold transition bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
             <ArrowLeft size={18} /> Volver a la Malla
@@ -231,11 +251,9 @@ export default function CalendarioIntegradoPage() {
           </div>
         ) : (
           <>
-            {/* PESTAÑA: SEMANA Y ASISTENCIA */}
             {pestañaActiva === 'semana' && (
               <div className="flex gap-6 items-start">
                 
-                {/* PANEL LATERAL DE ASISTENCIA */}
                 <div className="w-[320px] shrink-0 flex flex-col gap-4">
                   <h2 className="font-extrabold text-slate-900 text-sm uppercase tracking-wider mb-1">
                     Control de Asistencia
@@ -295,10 +313,8 @@ export default function CalendarioIntegradoPage() {
                   })}
                 </div>
 
-                {/* CALENDARIO GOOGLE GRID */}
                 <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
                   
-                  {/* Navigator */}
                   <div className="p-4 flex justify-between items-center bg-white border-b border-slate-100">
                     <h2 className="text-xl font-extrabold text-slate-800">
                       {lunesSemana.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()}
@@ -325,7 +341,6 @@ export default function CalendarioIntegradoPage() {
                     </div>
                   </div>
 
-                  {/* Cabecera Días */}
                   <div className="flex ml-16 border-b border-slate-200 bg-white">
                     {diasDeLaSemanaActual.map(dia => {
                       const esHoy = dia.fechaStr === formatFechaLocal(horaActual)
@@ -342,10 +357,8 @@ export default function CalendarioIntegradoPage() {
                     })}
                   </div>
 
-                  {/* Cuerpo del Grid */}
                   <div className="flex relative overflow-y-auto max-h-[650px] custom-scrollbar">
                     
-                    {/* Eje Y (Horas) */}
                     <div className="w-16 shrink-0 bg-white relative border-r border-slate-100">
                       {HORAS_MOSTRADAS.map(hora => (
                         <div key={hora} className="relative" style={{ height: `${ALTO_HORA_PX}px` }}>
@@ -358,32 +371,27 @@ export default function CalendarioIntegradoPage() {
 
                     <div className="flex-1 flex relative">
                       
-                      {/* Líneas Horizontales */}
                       <div className="absolute inset-0 pointer-events-none">
                         {HORAS_MOSTRADAS.map(hora => (
                           <div key={hora} className="border-t border-slate-100 w-full" style={{ height: `${ALTO_HORA_PX}px` }}></div>
                         ))}
                       </div>
 
-                      {/* Columnas Días */}
                       {diasDeLaSemanaActual.map((dia, index) => {
                         const clasesHoy = horariosActivos.filter(h => h.dia === dia.id)
                         
                         return (
                           <div key={dia.id} className="flex-1 border-l border-slate-100 relative">
                             
-                            {/* Línea Roja de Hora Actual (Aislada por día) */}
                             {esSemanaActual && diaActualIndex === index && (
                               <div className="absolute left-0 right-0 h-0.5 bg-red-500 z-30 pointer-events-none" style={{ top: `${lineaRojaY}px` }}>
                                 <div className="absolute -left-1.5 -top-1.5 w-3.5 h-3.5 bg-red-500 rounded-full"></div>
                               </div>
                             )}
 
-                            {/* Bloques de Clases */}
                             {clasesHoy.map(clase => {
                               const ramoObj = ramos.find(r => r.id === clase.ramo_id)
                               
-                              // Validación de Rango de Fechas del Semestre
                               let dentroDeFechas = true
                               if (ramoObj?.fecha_inicio && ramoObj?.fecha_fin) {
                                 const fIni = new Date(ramoObj.fecha_inicio + 'T00:00:00')
@@ -435,7 +443,6 @@ export default function CalendarioIntegradoPage() {
               </div>
             )}
 
-            {/* PESTAÑA: CONFIGURACIÓN PLANTILLA BASE */}
             {pestañaActiva === 'base' && (
               <div>
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6">

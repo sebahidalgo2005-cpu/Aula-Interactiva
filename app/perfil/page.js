@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image' // Corrección: Importación del componente Optimizado
 import { ArrowLeft, User, Mail, Save, AlertTriangle, GraduationCap, Building2 } from 'lucide-react'
 
 export default function PerfilPage() {
@@ -71,7 +72,15 @@ export default function PerfilPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8 flex items-center gap-6">
           <div className="w-24 h-24 bg-sky-100 rounded-full border-4 border-sky-50 flex items-center justify-center overflow-hidden shrink-0">
             {user?.user_metadata?.avatar_url ? (
-              <img src={user.user_metadata.avatar_url} alt="Foto de perfil" className="w-full h-full object-cover" />
+              // Corrección: Componente Image de Next.js (con unoptimized porque la URL viene de Google)
+              <Image 
+                src={user.user_metadata.avatar_url} 
+                alt="Foto de perfil" 
+                width={96} 
+                height={96} 
+                unoptimized
+                className="w-full h-full object-cover" 
+              />
             ) : (
               <User size={40} className="text-sky-600" />
             )}
