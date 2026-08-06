@@ -20,11 +20,12 @@ export default function ModalRamo() {
   
   const [formData, setFormData] = useState({
     nombre: '', color: '#3b82f6', estado: 'pendiente',
-    creditos: '5', nota_final: '4.0', // FIX: Usamos String para los decimales fluidos
+    creditos: '5', nota_final: '4.0', 
     fecha_inicio: '', fecha_fin: '', 
     permite_eximicion: false, nota_eximicion: '5.5', nota_aprobacion: '4.0',
     exige_asistencia: false, porcentaje_asistencia_minima: '70',
-    apuntes: '# Apuntes de Clase', prerrequisitos: [], grupos: [], archivos: []
+    apuntes: '# Apuntes de Clase', prerrequisitos: [], grupos: [], archivos: [],
+    es_anual: false
   })
 
   useEffect(() => {
@@ -45,7 +46,8 @@ export default function ModalRamo() {
         apuntes: ramoSeleccionado.apuntes || '# Apuntes de Clase',
         prerrequisitos: ramoSeleccionado.prerrequisitos?.filter(id => ramos.some(r => r.id === id)) || [],
         grupos: ramoSeleccionado.grupos || [],
-        archivos: ramoSeleccionado.archivos || []
+        archivos: ramoSeleccionado.archivos || [],
+        es_anual: ramoSeleccionado.es_anual || false
       })
       setActivarSimulador(false)
     }
@@ -70,7 +72,6 @@ export default function ModalRamo() {
 
     let notaFaltanteEximicion = null; let notaFaltanteAprobacion = null
     
-    // Parseo rápido para matemática interna de la UI
     const numEximicion = parseFloat(formData.nota_eximicion) || 0
     const numAprobacion = parseFloat(formData.nota_aprobacion) || 0
     
@@ -87,7 +88,6 @@ export default function ModalRamo() {
     try {
       setGuardando(true)
 
-      // FIX: Parseo seguro a número antes de enviar a BD
       const datosParaBD = {
         ...formData,
         nota_final: parseFloat(formData.nota_final) || 0,
@@ -190,13 +190,17 @@ export default function ModalRamo() {
               <div className="grid grid-cols-2 gap-6 bg-blue-50/50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
                 <div>
                   <label className="block text-xs font-bold text-blue-900 mb-1 uppercase flex items-center gap-1"><Award size={14}/> Créditos (SCT)</label>
-                  {/* FIX: Mantenemos el estado en String para que no borre puntos/comas */}
                   <input type="text" value={formData.creditos} onChange={(e) => setFormData({...formData, creditos: e.target.value})} className="w-full border-2 border-blue-200 rounded-lg p-2.5 font-bold text-slate-900 bg-white outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-blue-900 mb-1 uppercase">Nota Final (PPA)</label>
-                  {/* FIX: Mantenemos el estado en String */}
                   <input type="text" value={formData.nota_final} onChange={(e) => setFormData({...formData, nota_final: e.target.value})} className="w-full border-2 border-blue-200 rounded-lg p-2.5 font-bold text-slate-900 bg-white outline-none" />
+                </div>
+                <div className="col-span-2 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={formData.es_anual} onChange={(e) => setFormData({...formData, es_anual: e.target.checked})} className="w-5 h-5 text-blue-600 rounded" />
+                    <span className="text-sm font-bold text-blue-900">Ramo Anual (Abarca 2 Semestres en la malla)</span>
+                  </label>
                 </div>
               </div>
 
@@ -349,7 +353,6 @@ export default function ModalRamo() {
                          if(window.confirm("¿Seguro que deseas borrar permanentemente este archivo?")) {
                            await supabase.storage.from('material_estudio').remove([archivo.ruta]);
                            
-                           // FIX: Sincronización instantánea de DB al borrar
                            const archivosRestantes = formData.archivos.filter((_, i) => i !== idx);
                            setFormData({...formData, archivos: archivosRestantes});
                            await supabase.from('ramos').update({ archivos: archivosRestantes }).eq('id', ramoSeleccionado.id);
@@ -378,7 +381,6 @@ export default function ModalRamo() {
                       
                       const nuevosArchivos = [...(formData.archivos || []), { nombre: file.name, url: publicUrl, ruta: ruta }];
                       
-                      // FIX: Sincronización instantánea de DB al subir
                       setFormData({ ...formData, archivos: nuevosArchivos });
                       await supabase.from('ramos').update({ archivos: nuevosArchivos }).eq('id', ramoSeleccionado.id);
                     }} 

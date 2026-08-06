@@ -10,15 +10,15 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
   let iconOverlay = null
 
   if (esFoco) {
-    visualClasses = "ring-4 ring-sky-400 shadow-2xl scale-105 z-30 bg-white"
+    visualClasses = "ring-4 ring-sky-400 shadow-2xl scale-105 bg-white"
   } else if (esPrerrequisito) {
-    visualClasses = "ring-4 ring-orange-400 shadow-lg shadow-orange-500/30 scale-105 z-20 bg-orange-50 border-orange-400"
+    visualClasses = "ring-4 ring-orange-400 shadow-lg shadow-orange-500/30 scale-105 bg-orange-50 border-orange-400"
     iconOverlay = <Lock size={16} className="absolute top-2 right-2 text-orange-500" strokeWidth={3} />
   } else if (esAbiertoPorFoco) {
-    visualClasses = "ring-4 ring-emerald-400 shadow-lg shadow-emerald-500/30 scale-105 z-20 bg-emerald-50 border-emerald-400"
+    visualClasses = "ring-4 ring-emerald-400 shadow-lg shadow-emerald-500/30 scale-105 bg-emerald-50 border-emerald-400"
     iconOverlay = <Key size={16} className="absolute top-2 right-2 text-emerald-500" strokeWidth={3} />
   } else if (oscurecer) {
-    visualClasses = "opacity-30 grayscale blur-[1px] scale-95 z-0"
+    visualClasses = "opacity-30 grayscale blur-[1px] scale-95"
   } else {
     if (ramo.estado === 'aprobado') visualClasses = "opacity-75 border-slate-400 text-slate-800 bg-slate-100"
     if (ramo.estado === 'cursando') visualClasses = "ring-4 ring-yellow-400 font-bold text-black bg-yellow-50"
@@ -28,13 +28,20 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
     visualClasses = "opacity-20 border-dashed bg-slate-100 border-slate-400 scale-95"
   }
 
+  let baseZIndex = ramo.es_anual ? 10 : 1;
+  if (esFoco) baseZIndex = 30;
+  if (esPrerrequisito || esAbiertoPorFoco) baseZIndex = 20;
+  if (isOverlay) baseZIndex = 50;
+
   return (
     <div
       ref={setNodeRef}
       style={{
         ...style,
         borderLeftColor: ramo.color || '#3b82f6',
-        borderLeftWidth: '10px'
+        borderLeftWidth: '10px',
+        width: ramo.es_anual ? 'calc(200% + 1.5rem)' : '100%',
+        zIndex: baseZIndex
       }}
       {...attributes}
       {...listeners}
@@ -43,11 +50,13 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
       onClick={(e) => {
         if (!isDragging) onClick(e)
       }}
-      className={`absolute inset-0 w-full h-full p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing text-sm flex flex-col justify-center text-left transition-all duration-300 border-y border-r border-l-0 ${visualClasses} ${isOverlay ? 'shadow-2xl opacity-100 ring-4 ring-blue-400 scale-105 rotate-2 z-50 cursor-grabbing' : 'hover:shadow-lg'}`}
+      className={`absolute inset-0 h-full p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing text-sm flex flex-col justify-center text-left transition-all duration-300 border-y border-r border-l-0 ${visualClasses} ${isOverlay ? 'shadow-2xl opacity-100 ring-4 ring-blue-400 scale-105 rotate-2 cursor-grabbing' : 'hover:shadow-lg'}`}
     >
       {iconOverlay}
       <span className="font-extrabold text-slate-900 text-[15px] leading-tight line-clamp-2 pr-4">{ramo.nombre}</span>
       <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">{ramo.estado}</span>
+      
+      {ramo.es_anual && <span className="absolute top-2 right-8 text-[10px] font-extrabold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full uppercase">Anual</span>}
       
       {esPrerrequisito && <span className="absolute bottom-2 left-3 text-[10px] font-extrabold text-orange-600 uppercase">Debes aprobarlo antes</span>}
       {esAbiertoPorFoco && <span className="absolute bottom-2 left-3 text-[10px] font-extrabold text-emerald-600 uppercase">Se desbloqueará</span>}
@@ -55,7 +64,6 @@ function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer
   )
 }
 
-// FIX: Pasamos el prop 'dragActivo' para que todos sepan que se está moviendo algo en la pizarra
 function RamoCard({ ramo, dragActivo }) {
   const { setRamoSeleccionado, ramoEnFoco, setRamoEnFoco, ramos } = useMallaStore()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ramo.id })
@@ -77,7 +85,6 @@ function RamoCard({ ramo, dragActivo }) {
       setNodeRef={setNodeRef}
       attributes={attributes}
       listeners={listeners}
-      // FIX PERFORMANCE: Bloqueamos los hover si hay algún objeto en el aire
       onPointerEnter={() => { if (!dragActivo && !isDragging) setRamoEnFoco(ramo.id) }}
       onPointerLeave={() => { if (!dragActivo && !isDragging) setRamoEnFoco(null) }}
       onClick={() => setRamoSeleccionado(ramo)}
@@ -113,6 +120,10 @@ export default function TableroMalla() {
     const map = new Map()
     ramos.forEach(r => {
       map.set(`${r.semestre_columna}-${r.fila_posicion}`, r)
+      // FIX PROFESIONAL: Si es anual, "ocupar" lógicamente la celda adyacente para validaciones
+      if (r.es_anual) {
+        map.set(`${r.semestre_columna + 1}-${r.fila_posicion}`, { ...r, esFantasma: true })
+      }
     })
     return map
   }, [ramos])
@@ -141,12 +152,40 @@ export default function TableroMalla() {
       const [, semStr, filaStr] = overId.split('-')
       const nuevoSemestre = parseInt(semStr, 10)
       const nuevaFila = parseInt(filaStr, 10)
+      
+      const ramoMovido = ramos.find(r => r.id === ramoId)
+      if (!ramoMovido) return;
 
-      const celdaOcupada = ramos.some(r => r.semestre_columna === nuevoSemestre && r.fila_posicion === nuevaFila && r.id !== ramoId)
+      // FIX PROFESIONAL: Bloquear Ramos Anuales que intenten desbordar la malla
+      if (ramoMovido.es_anual && nuevoSemestre >= numSemestres) {
+        return alert("Un ramo anual necesita abarcar 2 semestres. No puedes colocarlo en la última columna.")
+      }
 
-      if (!celdaOcupada) {
-        moverRamo(ramoId, nuevoSemestre, nuevaFila)
-        await supabase.from('ramos').update({ semestre_columna: nuevoSemestre, fila_posicion: nuevaFila }).eq('id', ramoId)
+      // Validar que la celda principal y la celda adyacente (si es anual) estén vacías
+      const celdaOcupada = mallaMap.has(`${nuevoSemestre}-${nuevaFila}`) && mallaMap.get(`${nuevoSemestre}-${nuevaFila}`).id !== ramoId
+      const celdaSiguienteOcupada = ramoMovido.es_anual ? (mallaMap.has(`${nuevoSemestre + 1}-${nuevaFila}`) && mallaMap.get(`${nuevoSemestre + 1}-${nuevaFila}`).id !== ramoId) : false;
+
+      if (!celdaOcupada && !celdaSiguienteOcupada) {
+        
+        // Guardamos las posiciones previas por si hay que hacer un "Rollback"
+        const prevCol = ramoMovido.semestre_columna
+        const prevFila = ramoMovido.fila_posicion
+
+        // UI Optimista (Mueve instantáneamente en el cliente)
+        moverRamo(ramoId, nuevoSemestre, nuevaFila) 
+        
+        // Ejecución en la base de datos
+        const { error } = await supabase.from('ramos').update({ semestre_columna: nuevoSemestre, fila_posicion: nuevaFila }).eq('id', ramoId)
+        
+        // FIX PROFESIONAL: Rollback ante fallo de internet o base de datos
+        if (error) {
+          console.error("Error al sincronizar con BD:", error)
+          moverRamo(ramoId, prevCol, prevFila)
+          alert("Error de conexión: No se pudo guardar el cambio en la nube. Se ha deshecho el movimiento.")
+        }
+
+      } else {
+        alert("La posición seleccionada no tiene espacio suficiente.")
       }
     }
   }
@@ -162,7 +201,8 @@ export default function TableroMalla() {
       estado: 'pendiente',
       semestre_columna: semestreColumna,
       fila_posicion: filaPosicion,
-      prerrequisitos: [] 
+      prerrequisitos: [],
+      es_anual: false
     }
     
     const { data, error } = await supabase.from('ramos').insert(nuevoRamo).select().single()
@@ -184,15 +224,17 @@ export default function TableroMalla() {
             
             <div className="flex-1 bg-slate-200/40 rounded-xl p-3 border-2 border-slate-300 border-dashed relative">
               {filasArray.map((fila) => {
-                const ramoEnEstaCelda = mallaMap.get(`${sem}-${fila}`)
+                // Evitamos renderizar objetos fantasmas (utilizados lógicamente para validar espacios de Ramos Anuales)
+                const ramoReal = mallaMap.has(`${sem}-${fila}`) && !mallaMap.get(`${sem}-${fila}`).esFantasma ? mallaMap.get(`${sem}-${fila}`) : null
+                
                 return (
                   <CeldaMalla 
                     key={`celda-${sem}-${fila}`} 
                     sem={sem} 
                     fila={fila} 
-                    ramo={ramoEnEstaCelda} 
+                    ramo={ramoReal} 
                     handleNuevoRamo={handleNuevoRamo} 
-                    dragActivo={activeId !== null} // FIX: Informa si algo está volando en la malla
+                    dragActivo={activeId !== null} 
                   />
                 )
               })}

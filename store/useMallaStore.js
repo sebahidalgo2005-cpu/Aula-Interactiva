@@ -15,6 +15,8 @@ export const useMallaStore = create(
         { id: 3, nombre: 'Formación General', color: '#10b981' },
       ],
       
+      temaPlataforma: '#0f172a', // Color dinámico sin restricciones
+      
       ramoSeleccionado: null,
       ramoEnFoco: null, 
       modalCategoriasAbierto: false,
@@ -22,6 +24,7 @@ export const useMallaStore = create(
       numSemestres: 10,
       numFilas: 6,
 
+      setTemaPlataforma: (color) => set({ temaPlataforma: color }),
       setRamos: (ramos) => set({ ramos: ramos || [] }),
       setHorarios: (horarios) => set({ horarios: horarios || [] }),
       setRamoSeleccionado: (ramo) => set({ ramoSeleccionado: ramo }),
@@ -58,7 +61,6 @@ export const useMallaStore = create(
       agregarHorario: (horario) => set((state) => ({ horarios: [...state.horarios, horario] })),
       eliminarHorario: (id) => set((state) => ({ horarios: state.horarios.filter(h => h.id !== id) })),
 
-      // === SOLUCIÓN: NUEVAS FUNCIONES DE CATEGORÍAS ===
       agregarCategoria: (categoria) => set((state) => ({ 
         categorias: [...state.categorias, categoria] 
       })),
@@ -72,7 +74,8 @@ export const useMallaStore = create(
       partialize: (state) => ({ 
         numSemestres: state.numSemestres, 
         numFilas: state.numFilas, 
-        categorias: state.categorias 
+        categorias: state.categorias,
+        temaPlataforma: state.temaPlataforma // Recordar el color del usuario
       }),
     }
   )
