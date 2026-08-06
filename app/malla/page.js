@@ -32,7 +32,7 @@ export default function MallaPage() {
         if (authError || !user) return router.push('/')
         if (estaMontado) setUser(user)
 
-        const { data: ramosDB, error: dbError } = await supabase.from('ramos').select('*').eq('usuario_id', user.id)
+        const { data: ramosDB, error: dbError } = await supabase.from('ramos').select('*').eq('usuario_id', user.id).order('semestre_columna', { ascending: true })
         const { data: horariosDB } = await supabase.from('horarios').select('*').eq('usuario_id', user.id)
 
         if (dbError) throw dbError
@@ -115,6 +115,7 @@ export default function MallaPage() {
     }
   }
 
+  // Previene errores de hidratación de React usando isClient para los colores personalizados
   if (loading) return (
     <div className="flex flex-1 items-center justify-center text-white font-bold text-xl transition-colors duration-300" style={{ backgroundColor: isClient ? (temaPlataforma || '#0f172a') : '#0f172a' }}>
       Cargando Malla...

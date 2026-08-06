@@ -29,9 +29,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col bg-[#f1f5f9] overflow-hidden">
-        {/* Navbar Global para unificar la plataforma */}
+        {/* Navbar Global para unificar la plataforma y todos los menús */}
         <Navbar />
-        {/* Contenedor principal dinámico */}
+        {/* Contenedor principal dinámico protegido contra scroll rotos */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {children}
         </div>

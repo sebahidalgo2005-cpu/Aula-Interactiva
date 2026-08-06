@@ -44,7 +44,7 @@ export default function ModalRamo() {
         exige_asistencia: ramoSeleccionado.exige_asistencia || false,
         porcentaje_asistencia_minima: String(ramoSeleccionado.porcentaje_asistencia_minima ?? 70),
         apuntes: ramoSeleccionado.apuntes || '# Apuntes de Clase',
-        prerrequisitos: ramoSeleccionado.prerrequisitos?.filter(id => ramos.some(r => r.id === id)) || [],
+        prerrequisitos: (ramoSeleccionado.prerrequisitos || []).filter(id => ramos.some(r => r.id === id)),
         grupos: ramoSeleccionado.grupos || [],
         archivos: ramoSeleccionado.archivos || [],
         es_anual: ramoSeleccionado.es_anual || false
@@ -55,7 +55,7 @@ export default function ModalRamo() {
 
   if (!ramoSeleccionado) return null
 
-  const ramosQueAbre = ramos.filter(r => r.prerrequisitos?.includes(ramoSeleccionado.id))
+  const ramosQueAbre = (ramos || []).filter(r => r.prerrequisitos?.includes(ramoSeleccionado.id))
 
   const calcularProgresoNotas = () => {
     let notaAcumulada = 0; let porcentajeEvaluado = 0
@@ -171,9 +171,9 @@ export default function ModalRamo() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-slate-900 mb-2 flex items-center gap-1"><Tag size={14}/> Categoría</label>
-                    <select value={categorias.find(c => c.color === formData.color)?.nombre || ""} onChange={(e) => { const cat = categorias.find(c => c.nombre === e.target.value); if (cat) setFormData({...formData, color: cat.color}) }} className="w-full border-2 border-slate-300 rounded-lg p-2.5 outline-none bg-white text-slate-900 font-bold text-sm">
+                    <select value={(categorias || []).find(c => c.color === formData.color)?.nombre || ""} onChange={(e) => { const cat = (categorias || []).find(c => c.nombre === e.target.value); if (cat) setFormData({...formData, color: cat.color}) }} className="w-full border-2 border-slate-300 rounded-lg p-2.5 outline-none bg-white text-slate-900 font-bold text-sm">
                       <option value="">Seleccionar...</option>
-                      {categorias.map(cat => <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>)}
+                      {(categorias || []).map(cat => <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>)}
                     </select>
                   </div>
                   <div>
@@ -284,36 +284,56 @@ export default function ModalRamo() {
 
           {tab === 'notas' && (
             <div className="space-y-6">
-              <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg space-y-4">
-                <div className="flex gap-6 items-center">
-                  <div className="flex-1">
-                    <p className="text-sky-300 text-sm font-bold mb-1 uppercase">Promedio del Ramo</p>
-                    <p className="text-5xl font-extrabold">{progreso.notaAcumulada.toFixed(1)}</p>
-                    <p className="text-xs text-slate-400 mt-2 font-medium">Evaluado al {progreso.porcentajeEvaluado}%.</p>
-                  </div>
+              <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg flex gap-6">
+                <div className="flex-1">
+                  <p className="text-sky-300 text-sm font-bold mb-1 uppercase">Promedio del Ramo</p>
+                  <p className="text-5xl font-extrabold">{progreso.notaAcumulada.toFixed(1)}</p>
+                  <p className="text-xs text-slate-400 mt-2 font-medium">Evaluado al {progreso.porcentajeEvaluado}%.</p>
                 </div>
+                
+                {/* Nuevo módulo: Calculadora exacta de meta para aprobar/eximirse requerida por el usuario */}
                 {progreso.porcentajeRestante > 0 && (
-                  <div className="pt-4 border-t border-slate-800 flex flex-col gap-3">
+                  <div className="flex-1 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col justify-center gap-3">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-700 pb-2">Metas para el {progreso.porcentajeRestante}% restante</h4>
                     <div className="flex justify-between items-center">
-                      <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-sky-300">
-                        <input type="checkbox" checked={activarSimulador} onChange={(e) => setActivarSimulador(e.target.checked)} className="w-4 h-4 text-sky-500 rounded" />
-                        <Sliders size={16} /> Activar Simulador (Nota Hipotética)
-                      </label>
-                      {activarSimulador && <span className="text-xs font-extrabold bg-sky-500/20 text-sky-300 px-3 py-1 rounded-full border border-sky-500/30">Resultado: {progreso.notaFinalSimulada.toFixed(1)}</span>}
+                       <span className="text-xs font-bold text-slate-300">Para Aprobar (v. {formData.nota_aprobacion}):</span>
+                       <span className={`font-mono font-black text-sm px-2 py-0.5 rounded border border-slate-600 ${progreso.notaFaltanteAprobacion > 7 ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                         {progreso.notaFaltanteAprobacion > 7 ? 'Imposible' : Math.max(1, progreso.notaFaltanteAprobacion).toFixed(1)}
+                       </span>
                     </div>
-                    {activarSimulador && (
-                      <div className="flex items-center gap-4 bg-slate-800/80 p-3 rounded-lg border border-slate-700">
-                        <span className="text-xs text-slate-300 font-bold">Si obtengo un:</span>
-                        <input type="range" min="1.0" max="7.0" step="0.1" value={notaHipotetica} onChange={(e) => setNotaHipotetica(parseFloat(e.target.value))} className="flex-1 accent-sky-500 cursor-pointer" />
-                        <span className="font-mono text-lg font-extrabold text-sky-400 w-12 text-right">{notaHipotetica.toFixed(1)}</span>
+                    {formData.permite_eximicion && (
+                      <div className="flex justify-between items-center">
+                         <span className="text-xs font-bold text-slate-300">Para Eximirse (v. {formData.nota_eximicion}):</span>
+                         <span className={`font-mono font-black text-sm px-2 py-0.5 rounded border border-slate-600 ${progreso.notaFaltanteEximicion > 7 ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-sky-400'}`}>
+                           {progreso.notaFaltanteEximicion > 7 ? 'Imposible' : Math.max(1, progreso.notaFaltanteEximicion).toFixed(1)}
+                         </span>
                       </div>
                     )}
                   </div>
                 )}
               </div>
 
+              {progreso.porcentajeRestante > 0 && (
+                <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex flex-col gap-3">
+                  <div className="flex justify-between items-center">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-sky-300">
+                      <input type="checkbox" checked={activarSimulador} onChange={(e) => setActivarSimulador(e.target.checked)} className="w-4 h-4 text-sky-500 rounded" />
+                      <Sliders size={16} /> Activar Simulador de Escenarios
+                    </label>
+                    {activarSimulador && <span className="text-xs font-extrabold bg-sky-500/20 text-sky-300 px-3 py-1 rounded-full border border-sky-500/30">Resultado: {progreso.notaFinalSimulada.toFixed(1)}</span>}
+                  </div>
+                  {activarSimulador && (
+                    <div className="flex items-center gap-4 bg-slate-900 p-3 rounded-lg border border-slate-700">
+                      <span className="text-xs text-slate-300 font-bold">Si obtengo un:</span>
+                      <input type="range" min="1.0" max="7.0" step="0.1" value={notaHipotetica} onChange={(e) => setNotaHipotetica(parseFloat(e.target.value))} className="flex-1 accent-sky-500 cursor-pointer" />
+                      <span className="font-mono text-lg font-extrabold text-sky-400 w-12 text-right">{notaHipotetica.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-4">
-                {formData.grupos.map((grupo) => (
+                {(formData.grupos || []).map((grupo) => (
                   <div key={grupo.id} className="bg-white border-2 border-slate-200 rounded-xl p-5 shadow-sm">
                     <div className="flex justify-between items-center mb-4 pb-3 border-b-2 border-slate-100">
                       <input type="text" value={grupo.nombre} onChange={(e) => actualizarNombreGrupo(grupo.id, e.target.value)} className="font-extrabold text-slate-900 text-lg outline-none border-b-2 border-dashed border-slate-300 bg-transparent" />

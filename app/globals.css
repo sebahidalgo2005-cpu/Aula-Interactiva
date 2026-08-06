@@ -1,4 +1,4 @@
-/* Eliminamos importaciones conflictivas de @theme para evitar líneas amarillas de advertencia en VS Code. */
+/* Eliminamos importaciones conflictivas para evitar advertencias en VS Code con Tailwind v4. */
 @import "tailwindcss";
 
 :root {
@@ -19,7 +19,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Diseño unificado de la barra de desplazamiento (Scrollbar) */
+/* Diseño unificado de la barra de desplazamiento (Scrollbar) para todas las vistas */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;

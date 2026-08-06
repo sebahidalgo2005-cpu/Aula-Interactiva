@@ -92,8 +92,13 @@ function RamoCard({ ramo, dragActivo }) {
   )
 }
 
-function CeldaMalla({ sem, fila, ramo, handleNuevoRamo, dragActivo }) {
+function CeldaMalla({ sem, fila, ramo, esFantasma, handleNuevoRamo, dragActivo }) {
   const { setNodeRef, isOver } = useDroppable({ id: `celda-${sem}-${fila}` })
+
+  // Si esta celda está siendo ocupada por la cola de un ramo anual, la renderizamos invisible e inutilizable
+  if (esFantasma) {
+    return <div className="relative h-24 mb-4 border-2 border-transparent pointer-events-none"></div>
+  }
 
   return (
     <div ref={setNodeRef} className={`relative h-24 mb-4 rounded-xl transition-all border-2 ${isOver && !ramo ? 'bg-blue-100/50 border-blue-400 scale-105 z-10 shadow-lg' : 'border-transparent'} ${!ramo ? 'hover:border-slate-300' : ''}`}>
@@ -163,7 +168,7 @@ export default function TableroMalla() {
       const celdaSiguienteOcupada = ramoMovido.es_anual ? (mallaMap.has(`${nuevoSemestre + 1}-${nuevaFila}`) && mallaMap.get(`${nuevoSemestre + 1}-${nuevaFila}`).id !== ramoId) : false;
 
       if (!celdaOcupada && !celdaSiguienteOcupada) {
-        
+        // Rollback Pattern: UI optimista
         const prevCol = ramoMovido.semestre_columna
         const prevFila = ramoMovido.fila_posicion
 
@@ -217,7 +222,9 @@ export default function TableroMalla() {
             
             <div className="flex-1 bg-slate-200/40 rounded-xl p-3 border-2 border-slate-300 border-dashed relative">
               {filasArray.map((fila) => {
-                const ramoReal = mallaMap.has(`${sem}-${fila}`) && !mallaMap.get(`${sem}-${fila}`).esFantasma ? mallaMap.get(`${sem}-${fila}`) : null
+                const ramoEnCelda = mallaMap.get(`${sem}-${fila}`);
+                const ramoReal = ramoEnCelda && !ramoEnCelda.esFantasma ? ramoEnCelda : null;
+                const esFantasma = ramoEnCelda && ramoEnCelda.esFantasma;
                 
                 return (
                   <CeldaMalla 
@@ -225,6 +232,7 @@ export default function TableroMalla() {
                     sem={sem} 
                     fila={fila} 
                     ramo={ramoReal} 
+                    esFantasma={esFantasma}
                     handleNuevoRamo={handleNuevoRamo} 
                     dragActivo={activeId !== null} 
                   />
@@ -235,7 +243,7 @@ export default function TableroMalla() {
         ))}
       </div>
 
-      <DragOverlay>
+      <DragOverlay style={{ zIndex: 9999 }}>
         {activeRamo ? (
           <div className="relative h-24 w-[240px]">
              <RamoCardUI ramo={activeRamo} isOverlay={true} />
