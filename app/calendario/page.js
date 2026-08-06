@@ -2,11 +2,11 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Navbar from '@/components/Navbar'
 import { 
-  ArrowLeft, Calendar as CalendarIcon, Clock, Plus, Trash2, 
+  Calendar as CalendarIcon, Clock, Plus, Trash2, 
   MapPin, ChevronLeft, ChevronRight, CheckCircle, XCircle, 
-  Settings, AlertCircle, RefreshCw, AlertTriangle, Check 
+  Settings, AlertCircle, RefreshCw, AlertTriangle 
 } from 'lucide-react'
 import { useMallaStore } from '@/store/useMallaStore'
 
@@ -49,9 +49,8 @@ export default function CalendarioIntegradoPage() {
   const { ramos, setRamos, horarios, setHorarios, agregarHorario, eliminarHorario, actualizarRamo } = useMallaStore()
   
   const [loading, setLoading] = useState(true)
-  const [pestañaActiva, setPestañaActiva] = useState('semana') // 'semana' | 'base'
+  const [pestañaActiva, setPestañaActiva] = useState('semana') 
   
-  // Prevención de Hydration Error
   const [lunesSemana, setLunesSemana] = useState(null)
   const [horaActual, setHoraActual] = useState(null)
   const [evaluaciones, setEvaluaciones] = useState([])
@@ -65,7 +64,6 @@ export default function CalendarioIntegradoPage() {
   })
 
   useEffect(() => {
-    // Inicialización cliente
     setLunesSemana(getLunesActual())
     setHoraActual(new Date())
 
@@ -193,7 +191,7 @@ export default function CalendarioIntegradoPage() {
 
   if (loading || !lunesSemana || !horaActual) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-100 dark:bg-slate-900 font-bold text-xl text-slate-800 dark:text-white">
+      <div className="flex h-screen items-center justify-center bg-[#f1f5f9] dark:bg-slate-900 font-bold text-xl text-slate-800 dark:text-white">
         Cargando Agenda...
       </div>
     )
@@ -210,41 +208,37 @@ export default function CalendarioIntegradoPage() {
   const lineaRojaY = calcularPosicionY(`${horaActual.getHours()}:${horaActual.getMinutes()}`)
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-8 font-sans transition-colors">
-      <div className="max-w-[1400px] mx-auto">
+    <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans pb-12 transition-colors">
+      <Navbar />
+
+      <main className="max-w-[1400px] mx-auto mt-6 px-6">
         
-        {/* HEADER PRINCIPAL */}
-        <header className="mb-6 flex justify-between items-center flex-wrap gap-4">
-          <Link href="/malla" className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-blue-600 font-bold transition bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-            <ArrowLeft size={18} /> Volver a la Malla
-          </Link>
-          
-          <div className="flex gap-4 items-center">
-            <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
-              <button 
-                onClick={() => setPestañaActiva('semana')} 
-                className={`px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition ${pestañaActiva === 'semana' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}
-              >
-                <CalendarIcon size={16}/> Horario y Asistencia
-              </button>
-              <button 
-                onClick={() => setPestañaActiva('base')} 
-                className={`px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition ${pestañaActiva === 'base' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}
-              >
-                <Settings size={16}/> Plantilla Base
-              </button>
-            </div>
-            
-            {pestañaActiva === 'semana' && (
-              <button 
-                onClick={vincularGoogleCalendar} 
-                className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 transition"
-              >
-                <RefreshCw size={16} /> Sincronizar Google Calendar
-              </button>
-            )}
+        {/* PESTAÑAS SUB-HEADER */}
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+          <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
+            <button 
+              onClick={() => setPestañaActiva('semana')} 
+              className={`px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition ${pestañaActiva === 'semana' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}
+            >
+              <CalendarIcon size={16}/> Horario y Asistencia
+            </button>
+            <button 
+              onClick={() => setPestañaActiva('base')} 
+              className={`px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition ${pestañaActiva === 'base' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}
+            >
+              <Settings size={16}/> Plantilla Base
+            </button>
           </div>
-        </header>
+
+          {pestañaActiva === 'semana' && (
+            <button 
+              onClick={vincularGoogleCalendar} 
+              className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 transition"
+            >
+              <RefreshCw size={16} /> Sincronizar Google Calendar
+            </button>
+          )}
+        </div>
 
         {ramosCursando.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 p-12 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-center shadow-sm">
@@ -256,7 +250,7 @@ export default function CalendarioIntegradoPage() {
             {pestañaActiva === 'semana' && (
               <div className="flex flex-col lg:flex-row gap-6 items-start">
                 
-                {/* PANEL LATERAL DE ASISTENCIA */}
+                {/* PANEL DE ASISTENCIA */}
                 <div className="w-full lg:w-[320px] shrink-0 flex flex-col gap-4">
                   <h2 className="font-extrabold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-1">
                     Control de Asistencia
@@ -295,12 +289,6 @@ export default function CalendarioIntegradoPage() {
                             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                               {clasesPresente} presentes de {clasesValidas} clases válidas.
                             </p>
-                            
-                            {clasesJustificadas > 0 && (
-                              <div className="mt-2 bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded p-1.5 flex items-center gap-1 text-[10px] text-yellow-700 dark:text-yellow-400 font-bold">
-                                <Clock size={12}/> {clasesJustificadas} clase(s) justificada(s).
-                              </div>
-                            )}
 
                             {enPeligro && (
                               <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 mt-2 flex items-center gap-1 uppercase">
@@ -316,10 +304,9 @@ export default function CalendarioIntegradoPage() {
                   })}
                 </div>
 
-                {/* CALENDARIO DE CLASES Y PRUEBAS/TAREAS */}
+                {/* CALENDARIO PRINCIPAL */}
                 <div className="flex-1 w-full bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
                   
-                  {/* Selector de semana */}
                   <div className="p-4 flex justify-between items-center bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
                     <h2 className="text-xl font-extrabold text-slate-800 dark:text-white">
                       {lunesSemana.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()}
@@ -341,12 +328,12 @@ export default function CalendarioIntegradoPage() {
                         onClick={() => setLunesSemana(new Date(lunesSemana.getTime() + 7*24*60*60*1000))} 
                         className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition"
                       >
-                        ChevronRight size={20}/
+                        <ChevronRight size={20}/>
                       </button>
                     </div>
                   </div>
 
-                  {/* Días y Pruebas/Tareas (Deadlines) */}
+                  {/* CABECERA DÍAS CON EVALUACIONES */}
                   <div className="flex ml-16 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                     {diasDeLaSemanaActual.map(dia => {
                       const esHoy = dia.fechaStr === formatFechaLocal(horaActual)
@@ -361,7 +348,6 @@ export default function CalendarioIntegradoPage() {
                             {dia.fechaObj.getDate()}
                           </span>
 
-                          {/* Renderizado de Pruebas/Tareas en el día */}
                           {evalHoy.length > 0 && (
                             <div className="w-full mt-2 space-y-1">
                               {evalHoy.map(ev => {
@@ -388,9 +374,8 @@ export default function CalendarioIntegradoPage() {
                     })}
                   </div>
 
-                  {/* Grid de Bloques Horarios */}
+                  {/* CUADRÍCULA DE HORARIOS */}
                   <div className="flex relative overflow-y-auto max-h-[650px] custom-scrollbar">
-                    
                     <div className="w-16 shrink-0 bg-white dark:bg-slate-800 relative border-r border-slate-100 dark:border-slate-700">
                       {HORAS_MOSTRADAS.map(hora => (
                         <div key={hora} className="relative" style={{ height: `${ALTO_HORA_PX}px` }}>
@@ -421,15 +406,6 @@ export default function CalendarioIntegradoPage() {
 
                             {clasesHoy.map(clase => {
                               const ramoObj = ramos.find(r => r.id === clase.ramo_id)
-                              
-                              let dentroDeFechas = true
-                              if (ramoObj?.fecha_inicio && ramoObj?.fecha_fin) {
-                                const fIni = new Date(ramoObj.fecha_inicio + 'T00:00:00')
-                                const fFin = new Date(ramoObj.fecha_fin + 'T23:59:59')
-                                if (dia.fechaObj < fIni || dia.fechaObj > fFin) dentroDeFechas = false
-                              }
-                              if (!dentroDeFechas) return null 
-
                               const regAsistencia = (ramoObj?.asistencia || []).find(a => a.fecha === dia.fechaStr && a.horario_id === clase.id)
                               
                               const topPx = calcularPosicionY(clase.hora_inicio)
@@ -439,7 +415,6 @@ export default function CalendarioIntegradoPage() {
                               let bgClass = "bg-white dark:bg-slate-700 border-l-4 border border-slate-200 dark:border-slate-600"
                               if (regAsistencia?.estado === 'presente') bgClass = "bg-emerald-100 dark:bg-emerald-900/40 border-emerald-300 border-l-4"
                               else if (regAsistencia?.estado === 'ausente') bgClass = "bg-red-100 dark:bg-red-900/40 border-red-300 border-l-4"
-                              else if (regAsistencia?.estado === 'justificado') bgClass = "bg-yellow-100 dark:bg-yellow-900/40 border-yellow-300 border-l-4"
 
                               return (
                                 <div 
@@ -473,112 +448,102 @@ export default function CalendarioIntegradoPage() {
               </div>
             )}
 
-            {/* PESTAÑA CONFIGURACIÓN PLANTILLA BASE */}
+            {/* PESTAÑA PLANTILLA BASE */}
             {pestañaActiva === 'base' && (
-              <div>
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6">
-                  <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mb-4">Añadir bloque fijo a la plantilla</h2>
-                  <form onSubmit={handleCrearBloqueBase} className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Ramo</label>
-                      <select 
-                        value={formBase.ramo_id} 
-                        onChange={(e) => setFormBase({...formBase, ramo_id: e.target.value})} 
-                        className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2.5 font-bold text-slate-900 dark:text-white outline-none"
-                      >
-                        <option value="">Selecciona un ramo</option>
-                        {ramosCursando.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Día</label>
-                      <select 
-                        value={formBase.dia} 
-                        onChange={(e) => setFormBase({...formBase, dia: e.target.value})} 
-                        className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2.5 font-bold text-slate-900 dark:text-white outline-none"
-                      >
-                        {DIAS_SEMANA.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
-                      </select>
-                    </div>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+                <h2 className="text-base font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Añadir bloque semanal a la plantilla</h2>
+                
+                <form onSubmit={handleCrearBloqueBase} className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Ramo</label>
+                    <select 
+                      value={formBase.ramo_id} 
+                      onChange={(e) => setFormBase({...formBase, ramo_id: e.target.value})} 
+                      className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2.5 font-bold outline-none"
+                    >
+                      <option value="">Selecciona un ramo</option>
+                      {ramosCursando.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Inicio</label>
-                      <input 
-                        type="time" 
-                        required 
-                        value={formBase.hora_inicio} 
-                        onChange={(e) => setFormBase({...formBase, hora_inicio: e.target.value})} 
-                        className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2 font-bold text-slate-900 dark:text-white outline-none" 
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Fin</label>
-                      <input 
-                        type="time" 
-                        required 
-                        value={formBase.hora_fin} 
-                        onChange={(e) => setFormBase({...formBase, hora_fin: e.target.value})} 
-                        className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2 font-bold text-slate-900 dark:text-white outline-none" 
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Sala</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ej: A-201" 
-                        value={formBase.sala} 
-                        onChange={(e) => setFormBase({...formBase, sala: e.target.value})} 
-                        className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2 font-bold text-slate-900 dark:text-white outline-none" 
-                      />
-                    </div>
-                    
-                    <div>
-                      <button 
-                        type="submit" 
-                        disabled={guardando}
-                        className="w-full bg-slate-800 hover:bg-slate-900 text-white p-2.5 rounded-lg font-bold flex justify-center items-center gap-2 transition disabled:opacity-50"
-                      >
-                        <Plus size={18} /> {guardando ? 'Guardando' : 'Agregar'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Día</label>
+                    <select 
+                      value={formBase.dia} 
+                      onChange={(e) => setFormBase({...formBase, dia: e.target.value})} 
+                      className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2.5 font-bold outline-none"
+                    >
+                      {DIAS_SEMANA.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                    </select>
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Inicio</label>
+                    <input 
+                      type="time" 
+                      required 
+                      value={formBase.hora_inicio} 
+                      onChange={(e) => setFormBase({...formBase, hora_inicio: e.target.value})} 
+                      className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2 font-bold outline-none" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Fin</label>
+                    <input 
+                      type="time" 
+                      required 
+                      value={formBase.hora_fin} 
+                      onChange={(e) => setFormBase({...formBase, hora_fin: e.target.value})} 
+                      className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2 font-bold outline-none" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Sala</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej: B-12" 
+                      value={formBase.sala} 
+                      onChange={(e) => setFormBase({...formBase, sala: e.target.value})} 
+                      className="w-full border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg p-2 font-bold outline-none" 
+                    />
+                  </div>
+
+                  <div>
+                    <button 
+                      type="submit" 
+                      disabled={guardando}
+                      className="w-full text-white p-2.5 rounded-lg font-bold flex justify-center items-center gap-2 transition disabled:opacity-50"
+                      style={{ backgroundColor: 'var(--primary-color, #3b82f6)' }}
+                    >
+                      <Plus size={18} /> {guardando ? 'Guardando' : 'Agregar'}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 pt-4">
                   {DIAS_SEMANA.map(dia => {
                     const bloquesDelDia = horariosActivos.filter(h => h.dia === dia.id).sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio))
                     return (
                       <div key={dia.id} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
-                        <div className="bg-slate-900 text-white text-center py-3 font-extrabold text-sm uppercase">
+                        <div className="bg-slate-900 text-white text-center py-2.5 font-extrabold text-xs uppercase">
                           {dia.nombre}
                         </div>
-                        <div className="p-3 flex-1 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 min-h-[300px]">
+                        <div className="p-3 flex-1 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 min-h-[250px]">
                           {bloquesDelDia.map(bloque => {
                             const ramoObj = ramos.find(r => r.id === bloque.ramo_id)
                             return (
-                              <div key={bloque.id} className="p-3 rounded-xl shadow-sm bg-white dark:bg-slate-700 border-y border-r border-l-8 relative group" style={{ borderLeftColor: ramoObj?.color || '#3b82f6' }}>
+                              <div key={bloque.id} className="p-3 rounded-xl shadow-sm bg-white dark:bg-slate-700 border-y border-r border-l-8 relative" style={{ borderLeftColor: ramoObj?.color || '#3b82f6' }}>
                                 <div className="flex justify-between items-start">
-                                  <span className="font-extrabold text-slate-900 dark:text-white text-xs pr-2">
-                                    {ramoObj?.nombre}
-                                  </span>
-                                  <button 
-                                    onClick={() => handleBorrarBloqueBase(bloque.id)} 
-                                    className="text-red-400 hover:text-red-600 p-1 rounded transition opacity-80 hover:opacity-100"
-                                  >
+                                  <span className="font-extrabold text-xs pr-2">{ramoObj?.nombre}</span>
+                                  <button onClick={() => handleBorrarBloqueBase(bloque.id)} className="text-red-400 hover:text-red-600 p-1">
                                     <Trash2 size={14} />
                                   </button>
                                 </div>
                                 <div className="text-[11px] font-bold text-slate-500 dark:text-slate-300 mt-2 flex items-center gap-1">
                                   <Clock size={12} /> {bloque.hora_inicio} - {bloque.hora_fin}
                                 </div>
-                                {bloque.sala && (
-                                  <div className="text-[11px] font-bold text-sky-600 dark:text-sky-400 mt-1 flex items-center gap-1">
-                                    <MapPin size={12} /> {bloque.sala}
-                                  </div>
-                                )}
                               </div>
                             )
                           })}
@@ -592,52 +557,40 @@ export default function CalendarioIntegradoPage() {
           </>
         )}
 
-        {/* MODAL MARCAR ASISTENCIA */}
+        {/* MODAL DE REGISTRO ASISTENCIA */}
         {modalAsistencia && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700 p-6">
-              <h3 className="font-extrabold text-lg text-slate-900 dark:text-white mb-1 leading-tight">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+              <h3 className="font-extrabold text-lg text-slate-900 dark:text-white leading-tight">
                 {modalAsistencia.nombre}
               </h3>
-              <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-6 flex items-center gap-2">
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
                 <CalendarIcon size={14}/> {modalAsistencia.fechaStr.split('-').reverse().join('/')} | {modalAsistencia.horario}
               </p>
               
               <div className="space-y-3">
                 <button 
                   onClick={() => guardarAsistencia('presente')} 
-                  className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 transition text-emerald-800 dark:text-emerald-300 font-extrabold"
+                  className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-extrabold text-sm"
                 >
                   <span className="flex items-center gap-2"><CheckCircle size={18}/> Fui a clases (Presente)</span>
                 </button>
                 <button 
                   onClick={() => guardarAsistencia('ausente')} 
-                  className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-red-200 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 transition text-red-800 dark:text-red-300 font-extrabold"
+                  className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-red-200 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 font-extrabold text-sm"
                 >
                   <span className="flex items-center gap-2"><XCircle size={18}/> Falté a clases (Ausente)</span>
                 </button>
-                <button 
-                  onClick={() => guardarAsistencia('justificado')} 
-                  className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/40 hover:bg-yellow-100 transition text-yellow-800 dark:text-yellow-300 font-extrabold"
-                >
-                  <span className="flex items-center gap-2"><Clock size={18}/> Falta Justificada</span>
-                </button>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
+              <div className="pt-2 flex justify-between items-center">
                 {modalAsistencia.estadoActual ? (
-                  <button 
-                    onClick={() => guardarAsistencia('borrar')} 
-                    className="text-xs font-bold text-slate-400 hover:text-red-500 transition"
-                  >
+                  <button onClick={() => guardarAsistencia('borrar')} className="text-xs font-bold text-slate-400 hover:text-red-500">
                     Borrar registro
                   </button>
                 ) : <div></div>}
 
-                <button 
-                  onClick={() => setModalAsistencia(null)} 
-                  className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-lg"
-                >
+                <button onClick={() => setModalAsistencia(null)} className="text-xs font-bold bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-lg">
                   Cerrar
                 </button>
               </div>
@@ -645,7 +598,7 @@ export default function CalendarioIntegradoPage() {
           </div>
         )}
 
-      </div>
+      </main>
     </div>
   )
 }

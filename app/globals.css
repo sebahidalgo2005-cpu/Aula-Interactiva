@@ -1,47 +1,36 @@
-/* 1. IMPORTACIONES DE TERCEROS SIEMPRE VAN PRIMERO */
 @import 'react-big-calendar/lib/css/react-big-calendar.css';
-
-/* 2. LUEGO IMPORTAMOS TAILWIND */
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
-/* 3. Variables y configuraciones originales */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --primary-color: #3b82f6;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Tema Azul Universitario (Navy) */
-html.theme-navy {
-  --background: #0b132b;
-  --foreground: #ffffff;
-  background-color: var(--background);
-  color: var(--foreground);
+/* Clases de utilidad para el color de acento dinámico */
+.bg-primary-dynamic {
+  background-color: var(--primary-color, #3b82f6) !important;
 }
 
-html.theme-navy body {
-  background-color: var(--background) !important;
+.text-primary-dynamic {
+  color: var(--primary-color, #3b82f6) !important;
+}
+
+.border-primary-dynamic {
+  border-color: var(--primary-color, #3b82f6) !important;
 }
 
 /* Scrollbar personalizada */
@@ -59,7 +48,6 @@ html.theme-navy body {
   border-radius: 9999px;
 }
 
-.dark .custom-scrollbar::-webkit-scrollbar-thumb,
-html.theme-navy .custom-scrollbar::-webkit-scrollbar-thumb {
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #475569;
 }
