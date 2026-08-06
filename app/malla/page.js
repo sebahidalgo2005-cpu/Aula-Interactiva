@@ -1,178 +1,166 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import html2canvas from 'html2canvas'
-import Navbar from '@/components/Navbar'
-import { Plus, Minus, Download, Layers, CloudUpload, FileText, Upload } from 'lucide-react'
-import { useMallaStore } from '@/store/useMallaStore'
 import TableroMalla from '@/components/TableroMalla'
-import ModalRamo from '@/components/ModalRamo'
 import ModalGestorCategorias from '@/components/ModalGestorCategorias'
+import ModalRamo from '@/components/ModalRamo'
+import { useMallaStore } from '@/store/useMallaStore'
+import { Settings, Plus, Minus, LogOut, Link as LinkIcon, Calendar as CalendarIcon, LayoutDashboard, TrendingUp, Download, Share2, UploadCloud } from 'lucide-react'
+import Link from 'next/link'
+import html2canvas from 'html2canvas' 
 
 export default function MallaPage() {
   const supabase = createClient()
   const router = useRouter()
-  const mallaRef = useRef(null)
-  const fileInputRef = useRef(null)
-
-  const { 
-    ramos, setRamos, semestres, setSemestres, categorias, setCategorias,
-    agregarSemestre, eliminarSemestre, agregarFila, eliminarFila, setRamoEnFoco, setFilas
-  } = useMallaStore()
-
+  
+  // FIX: Agregamos setHorarios para extraerlos de la base de datos al inicio
+  const { ramos, setRamos, setHorarios, modificarSemestres, modificarFilas, setModalCategoriasAbierto } = useMallaStore()
+  
   const [loading, setLoading] = useState(true)
-  const [guardando, setGuardando] = useState(false)
-  const [importando, setImportando] = useState(false)
-  const [modalCategoriasAbierto, setModalCategoriasAbierto] = useState(false)
   const [user, setUser] = useState(null)
+  const [exportando, setExportando] = useState(false)
 
   useEffect(() => {
+    let estaMontado = true
+
     const cargarDatos = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error || !user) return router.push('/')
-      setUser(user)
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user) return router.push('/')
+        if (estaMontado) setUser(user)
 
-      const [ramosRes, semestresRes, catRes] = await Promise.all([
-        supabase.from('ramos').select('*').eq('usuario_id', user.id),
-        supabase.from('semestres').select('*').eq('usuario_id', user.id).order('numero', { ascending: true }),
-        supabase.from('categorias').select('*').eq('usuario_id', user.id)
-      ])
+        // FIX: Cargar tanto Ramos como Horarios para no perderlos al recargar
+        const { data: ramosDB, error: dbError } = await supabase.from('ramos').select('*').eq('usuario_id', user.id)
+        const { data: horariosDB } = await supabase.from('horarios').select('*').eq('usuario_id', user.id)
 
-      // Cálculo Seguro de filas
-      if (ramosRes.data) {
-        setRamos(ramosRes.data)
-        let maxFilaDetectada = 9
-        ramosRes.data.forEach(r => {
-          const fn = parseInt(r.fila, 10)
-          if (!isNaN(fn) && fn > maxFilaDetectada) maxFilaDetectada = fn
-        })
-        setFilas(maxFilaDetectada + 1)
+        if (dbError) throw dbError
+
+        if (estaMontado) {
+          if (ramosDB && Array.isArray(ramosDB)) setRamos(ramosDB)
+          if (horariosDB && Array.isArray(horariosDB)) setHorarios(horariosDB)
+        }
+      } catch (error) {
+        console.error("Error al cargar la malla:", error)
+      } finally {
+        if (estaMontado) setLoading(false)
       }
-      
-      if (semestresRes.data && semestresRes.data.length > 0) setSemestres(semestresRes.data)
-      else setSemestres([{ id: '1', numero: 1 }, { id: '2', numero: 2 }]) 
-      
-      if (catRes.data) setCategorias(catRes.data)
-      setLoading(false)
     }
     cargarDatos()
-  }, [])
+    return () => { estaMontado = false }
+  }, [router, setRamos, setHorarios]) // <- dependencias actualizadas
 
-  const handleGuardarNube = async () => {
-    setGuardando(true)
+  // --- EXPORTAR A PNG (Corregido para Mallas Grandes) ---
+  const exportarMalla = async () => {
+    setExportando(true)
     try {
-      const semestresData = semestres.map(s => ({ ...s, usuario_id: user.id }))
-      await supabase.from('semestres').upsert(semestresData)
+      const elementoMalla = document.getElementById('contenedor-malla')
+      if (!elementoMalla) return
       
-      const ramosData = ramos.map(r => ({ ...r, usuario_id: user.id }))
-      if (ramosData.length > 0) {
-        const { error } = await supabase.from('ramos').upsert(ramosData)
-        if (error) throw error
-      }
-      alert("¡Malla guardada y sincronizada correctamente en la nube!")
-    } catch (error) {
-      console.error(error)
-      alert("Error al sincronizar con la base de datos.")
-    } finally {
-      setGuardando(false)
-    }
-  }
-
-  const handleImportarPDF = async (event) => {
-    const file = event.target.files[0]
-    if (!file) return
-
-    setImportando(true)
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('usuario_id', user.id)
-
-    try {
-      const response = await fetch('/api/calendario/importar-malla', { method: 'POST', body: formData })
-      if (!response.ok) throw new Error("Error en el servidor de IA")
-      const data = await response.json()
-      setRamos([...ramos, ...data.ramosExtraidos])
-      alert("¡Malla analizada e importada con éxito!")
-    } catch (error) {
-      console.error(error)
-      alert("Hubo un problema procesando el PDF. Intenta ingresarlos manualmente.")
-    } finally {
-      setImportando(false)
-      if(fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  const handleExportarImagen = async () => {
-    if (!mallaRef.current) return
-    try {
-      const canvas = await html2canvas(mallaRef.current, {
-        scale: 2, useCORS: true, scrollX: 0, scrollY: 0,
-        windowWidth: mallaRef.current.scrollWidth, windowHeight: mallaRef.current.scrollHeight
+      // FIX VISUAL: Quitar overflow temporalmente para capturar la malla completa
+      const oldOverflow = elementoMalla.style.overflow;
+      elementoMalla.style.overflow = 'visible';
+      
+      const canvas = await html2canvas(elementoMalla, { 
+        scale: 2, 
+        backgroundColor: '#f8fafc', 
+        useCORS: true,
+        windowWidth: elementoMalla.scrollWidth,
+        windowHeight: Math.max(elementoMalla.scrollHeight, window.innerHeight)
       })
-      const link = document.createElement('a')
-      link.href = canvas.toDataURL('image/png')
-      link.download = `Mi_Malla_${new Date().toISOString().split('T')[0]}.png`
-      link.click()
-    } catch (err) {
-      alert("No se pudo exportar la imagen.")
+
+      // Restaurar estilos
+      elementoMalla.style.overflow = oldOverflow;
+
+      const enlace = document.createElement('a')
+      enlace.download = 'Mi_Malla_Academica.png'
+      enlace.href = canvas.toDataURL('image/png')
+      enlace.click()
+    } catch (error) {
+      alert("Error al exportar la malla.")
+    } finally {
+      setExportando(false)
     }
   }
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-[#f1f5f9] dark:bg-slate-900 font-bold text-xl text-slate-800 dark:text-white">Cargando Malla Académica...</div>
+  const compartirMalla = () => {
+    const mallaLimpia = ramos.map(({ id, usuario_id, ...resto }) => resto)
+    const mallaJSON = JSON.stringify(mallaLimpia)
+    navigator.clipboard.writeText(mallaJSON)
+    alert("¡Código de tu malla copiado al portapapeles! Envíalo a tus compañeros para que lo importen.")
+  }
+
+  if (loading) return <div className="flex h-screen items-center justify-center bg-[#0f172a] text-white font-bold text-xl">Cargando Malla...</div>
+
+  const totalRamos = ramos.length
+  const aprobados = ramos.filter(r => r.estado === 'aprobado').length
+  const porcentaje = totalRamos === 0 ? 0 : Math.round((aprobados / totalRamos) * 100)
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans flex flex-col transition-colors">
-      <Navbar />
+    <div className="flex h-screen bg-[#f1f5f9] font-sans">
+      
+      <aside className="w-[280px] bg-[#0f172a] text-white flex flex-col shrink-0 border-r border-slate-900 shadow-xl z-20">
+        <div className="p-6">
+          <h1 className="text-2xl font-extrabold text-white mb-2 tracking-tight">Mi Malla Académica</h1>
+          <button className="text-sm text-sky-300 hover:text-white flex items-center gap-2 transition font-medium"><LinkIcon size={14} /> Editar Nombre</button>
+        </div>
 
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between flex-wrap gap-4 sticky top-16 z-30 shadow-sm">
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setRamoEnFoco({ id: null, nuevo: true })} className="text-white font-extrabold text-xs px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition hover:brightness-110" style={{ backgroundColor: 'var(--primary-color, #3b82f6)' }}>
-            <Plus size={16}/> Añadir Ramo
-          </button>
-
-          <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-            <button onClick={agregarSemestre} className="hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs px-3 py-2 flex items-center gap-1 transition"><Plus size={14}/> Sem</button>
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600"></div>
-            <button onClick={eliminarSemestre} className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/50 font-bold text-xs px-3 py-2 flex items-center gap-1 transition"><Minus size={14}/> Sem</button>
+        <div className="px-6 py-5 border-t border-slate-700/50">
+          <h3 className="text-xs font-bold text-slate-400 mb-3 tracking-widest uppercase">Progreso Académico</h3>
+          <div className="w-full bg-slate-800 rounded-full h-3 mb-2 overflow-hidden shadow-inner">
+            <div className="bg-sky-500 h-3 rounded-full transition-all duration-500" style={{ width: `${porcentaje}%` }}></div>
           </div>
+          <div className="text-right text-sm text-sky-300 font-bold">{aprobados} / {totalRamos} ({porcentaje}%)</div>
+        </div>
 
-          <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-            <button onClick={agregarFila} className="hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs px-3 py-2 flex items-center gap-1 transition"><Plus size={14}/> Fila</button>
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600"></div>
-            <button onClick={eliminarFila} className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/50 font-bold text-xs px-3 py-2 flex items-center gap-1 transition"><Minus size={14}/> Fila</button>
+        <div className="px-6 py-5 border-t border-slate-700/50 flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+          
+          <h3 className="text-xs font-bold text-slate-400 mb-3 tracking-widest uppercase">Módulos Principales</h3>
+          <Link href="/dashboard" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700">
+            <LayoutDashboard size={16} className="text-sky-400" /> Panel de Inicio
+          </Link>
+          <Link href="/rendimiento" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700 mt-2">
+            <TrendingUp size={16} className="text-emerald-400" /> Rendimiento & PPA
+          </Link>
+          <Link href="/evaluaciones" className="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700 mt-2">
+            <CalendarIcon size={16} className="text-amber-400" /> Pruebas y Tareas
+          </Link>
+          <Link href="/calendario" className="w-full flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold shadow-md shadow-blue-500/20 mt-2">
+            <CalendarIcon size={16} /> Horario y Asistencia
+          </Link>
+
+          <h3 className="text-xs font-bold text-slate-400 mt-6 mb-3 tracking-widest uppercase">Herramientas Pro</h3>
+          <button onClick={exportarMalla} disabled={exportando} className="w-full flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-sm py-2.5 px-4 rounded-md text-left transition text-white font-bold shadow-md">
+            <Download size={16} /> {exportando ? 'Exportando...' : 'Exportar Malla (PNG)'}
+          </button>
+          <button onClick={compartirMalla} className="w-full flex items-center gap-3 bg-teal-600 hover:bg-teal-700 text-sm py-2.5 px-4 rounded-md text-left transition text-white font-bold shadow-md mt-2">
+            <Share2 size={16} /> Compartir Plantilla
+          </button>
+          <button className="w-full flex items-center gap-3 bg-amber-600 hover:bg-amber-700 text-sm py-2.5 px-4 rounded-md text-left transition text-white font-bold shadow-md mt-2">
+            <UploadCloud size={16} /> Importar Malla (IA)
+          </button>
+
+          <h3 className="text-xs font-bold text-slate-400 mt-6 mb-3 tracking-widest uppercase">Diseño de Cuadrícula</h3>
+          <button onClick={() => setModalCategoriasAbierto(true)} className="w-full flex items-center gap-3 bg-[#1e293b] hover:bg-[#334155] text-sm py-2.5 px-4 rounded-md transition font-medium"><Settings size={16} className="text-slate-400" /> Categorías</button>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button onClick={() => modificarSemestres(1)} className="flex justify-center items-center gap-2 bg-[#1e293b] hover:bg-[#334155] text-xs py-2 rounded-md transition"><Plus size={14} /> Columna</button>
+            <button onClick={() => modificarSemestres(-1)} className="flex justify-center items-center gap-2 bg-[#1e293b] hover:bg-[#334155] text-xs py-2 rounded-md transition"><Minus size={14} /> Columna</button>
+            <button onClick={() => modificarFilas(1)} className="flex justify-center items-center gap-2 bg-[#1e293b] hover:bg-[#334155] text-xs py-2 rounded-md transition"><Plus size={14} /> Fila</button>
+            <button onClick={() => modificarFilas(-1)} className="flex justify-center items-center gap-2 bg-[#1e293b] hover:bg-[#334155] text-xs py-2 rounded-md transition"><Minus size={14} /> Fila</button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setModalCategoriasAbierto(true)} className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 font-extrabold text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5">
-            <Layers size={14}/> Categorías
-          </button>
-
-          <input type="file" accept="application/pdf" ref={fileInputRef} onChange={handleImportarPDF} className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} disabled={importando} className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-extrabold text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 disabled:opacity-50">
-            {importando ? <Upload size={14} className="animate-bounce"/> : <FileText size={14}/>} 
-            {importando ? 'Leyendo...' : 'Importar PDF'}
-          </button>
-
-          <button onClick={handleExportarImagen} className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
-            <Download size={14}/> Exportar
-          </button>
-
-          <button onClick={handleGuardarNube} disabled={guardando} className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition disabled:opacity-50">
-            <CloudUpload size={14}/> {guardando ? 'Guardando...' : 'Guardar Nube'}
-          </button>
+        <div className="p-4 border-t border-slate-700/50 bg-[#0b1120]">
+          <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }} className="w-full flex justify-center gap-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white text-sm py-2 rounded-md transition font-bold"><LogOut size={16} /> Salir</button>
         </div>
-      </div>
+      </aside>
 
-      <main className="flex-1 p-8 overflow-auto custom-scrollbar relative">
-        <div ref={mallaRef} className="bg-transparent rounded-2xl inline-block min-w-full">
-          <TableroMalla />
-        </div>
+      <main id="contenedor-malla" className="flex-1 overflow-auto p-8 relative bg-[#f1f5f9]">
+        <TableroMalla />
       </main>
 
+      <ModalGestorCategorias />
       <ModalRamo />
-      {modalCategoriasAbierto && <ModalGestorCategorias onClose={() => setModalCategoriasAbierto(false)} />}
     </div>
   )
 }

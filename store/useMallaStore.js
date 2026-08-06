@@ -1,45 +1,79 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
-export const useMallaStore = create((set, get) => ({
-  ramos: [],
-  semestres: [],
-  categorias: [],
-  horarios: [],
-  filas: 10,
-  ramoEnFoco: null,
+// Función segura para evitar crasheos de SSR en Next.js
+const getStorage = () => typeof window !== 'undefined' ? window.localStorage : undefined
 
-  // Setters iniciales
-  setRamos: (ramos) => set({ ramos }),
-  setSemestres: (semestres) => set({ semestres }),
-  setCategorias: (categorias) => set({ categorias }),
-  setHorarios: (horarios) => set({ horarios }),
-  setFilas: (filas) => set({ filas }),
-  setRamoEnFoco: (ramo) => set({ ramoEnFoco: ramo }),
+export const useMallaStore = create(
+  persist(
+    (set, get) => ({
+      ramos: [],
+      horarios: [],
+      categorias: [
+        { id: 1, nombre: 'Ciencias Básicas', color: '#3b82f6' },
+        { id: 2, nombre: 'Ingeniería Aplicada', color: '#ef4444' },
+        { id: 3, nombre: 'Formación General', color: '#10b981' },
+      ],
+      
+      ramoSeleccionado: null,
+      ramoEnFoco: null, 
+      modalCategoriasAbierto: false,
+      
+      numSemestres: 10,
+      numFilas: 6,
 
-  // Funciones de Dimensiones de la Malla (Recuperadas)
-  agregarSemestre: () => set((state) => ({
-    semestres: [...state.semestres, { id: Date.now().toString(), numero: state.semestres.length + 1 }]
-  })),
-  eliminarSemestre: () => set((state) => {
-    if (state.semestres.length <= 1) return state
-    return { semestres: state.semestres.slice(0, -1) }
-  }),
-  agregarFila: () => set((state) => ({ filas: state.filas + 1 })),
-  eliminarFila: () => set((state) => ({ filas: Math.max(1, state.filas - 1) })),
+      setRamos: (ramos) => set({ ramos: ramos || [] }),
+      setHorarios: (horarios) => set({ horarios: horarios || [] }),
+      setRamoSeleccionado: (ramo) => set({ ramoSeleccionado: ramo }),
+      setRamoEnFoco: (id) => set({ ramoEnFoco: id }),
+      setCategorias: (categorias) => set({ categorias: categorias || [] }),
+      setModalCategoriasAbierto: (isOpen) => set({ modalCategoriasAbierto: isOpen }),
 
-  // CRUD de Ramos
-  agregarRamo: (ramo) => set((state) => ({ ramos: [...state.ramos, ramo] })),
-  actualizarRamo: (id, datos) => set((state) => ({
-    ramos: state.ramos.map(r => r.id === id ? { ...r, ...datos } : r)
-  })),
-  eliminarRamo: (id) => set((state) => ({
-    ramos: state.ramos.filter(r => r.id !== id),
-    ramoEnFoco: null
-  })),
+      modificarSemestres: (cantidad) => set((state) => ({
+        numSemestres: Math.max(1, state.numSemestres + cantidad)
+      })),
+      modificarFilas: (cantidad) => set((state) => ({
+        numFilas: Math.max(1, state.numFilas + cantidad)
+      })),
 
-  // Funciones de Horarios
-  agregarHorario: (horario) => set((state) => ({ horarios: [...state.horarios, horario] })),
-  eliminarHorario: (id) => set((state) => ({
-    horarios: state.horarios.filter(h => h.id !== id)
-  }))
-}))
+      agregarRamo: (ramo) => set((state) => ({ ramos: [...state.ramos, ramo] })),
+      
+      actualizarRamo: (id, data) => set((state) => ({
+        ramos: state.ramos.map(r => r.id === id ? { ...r, ...data } : r)
+      })),
+      
+      eliminarRamo: (id) => set((state) => ({
+        ramos: state.ramos.filter(r => r.id !== id).map(r => ({
+          ...r,
+          prerrequisitos: (r.prerrequisitos || []).filter(prereqId => prereqId !== id)
+        }))
+      })),
+
+      moverRamo: (ramoId, nuevaColumna, nuevaFila) => set((state) => ({
+        ramos: state.ramos.map(r => r.id === ramoId ? { 
+          ...r, semestre_columna: parseInt(nuevaColumna, 10), fila_posicion: parseInt(nuevaFila, 10) 
+        } : r)
+      })),
+
+      agregarHorario: (horario) => set((state) => ({ horarios: [...state.horarios, horario] })),
+      eliminarHorario: (id) => set((state) => ({ horarios: state.horarios.filter(h => h.id !== id) })),
+
+      // === SOLUCIÓN: NUEVAS FUNCIONES DE CATEGORÍAS ===
+      agregarCategoria: (categoria) => set((state) => ({ 
+        categorias: [...state.categorias, categoria] 
+      })),
+      eliminarCategoria: (id) => set((state) => ({ 
+        categorias: state.categorias.filter(c => c.id !== id) 
+      })),
+    }),
+    {
+      name: 'malla-interactiva-storage',
+      storage: createJSONStorage(getStorage),
+      partialize: (state) => ({ 
+        numSemestres: state.numSemestres, 
+        numFilas: state.numFilas, 
+        categorias: state.categorias 
+      }),
+    }
+  )
+)

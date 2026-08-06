@@ -1,108 +1,199 @@
 'use client'
-import React, { useState, useEffect } from 'react'
-import { DndContext, useDraggable, useDroppable, closestCenter, DragOverlay } from '@dnd-kit/core'
+import { useState, useEffect, useMemo } from 'react'
+import { DndContext, useSensor, useSensors, PointerSensor, useDroppable, useDraggable, DragOverlay } from '@dnd-kit/core'
 import { useMallaStore } from '@/store/useMallaStore'
+import { createClient } from '@/utils/supabase/client'
+import { Plus, Lock, Key } from 'lucide-react'
 
-// COMPONENTE: Casilla donde se sueltan los ramos (Ahora SIEMPRE visible)
-function CeldaDroppable({ id, children }) {
-  const { setNodeRef, isOver } = useDroppable({ id })
+function RamoCardUI({ ramo, esFoco, esPrerrequisito, esAbiertoPorFoco, oscurecer, isDragging, isOverlay, onClick, onPointerEnter, onPointerLeave, setNodeRef, attributes, listeners, style }) {
+  let visualClasses = "border-slate-300 text-slate-900 bg-white"
+  let iconOverlay = null
+
+  if (esFoco) {
+    visualClasses = "ring-4 ring-sky-400 shadow-2xl scale-105 z-30 bg-white"
+  } else if (esPrerrequisito) {
+    visualClasses = "ring-4 ring-orange-400 shadow-lg shadow-orange-500/30 scale-105 z-20 bg-orange-50 border-orange-400"
+    iconOverlay = <Lock size={16} className="absolute top-2 right-2 text-orange-500" strokeWidth={3} />
+  } else if (esAbiertoPorFoco) {
+    visualClasses = "ring-4 ring-emerald-400 shadow-lg shadow-emerald-500/30 scale-105 z-20 bg-emerald-50 border-emerald-400"
+    iconOverlay = <Key size={16} className="absolute top-2 right-2 text-emerald-500" strokeWidth={3} />
+  } else if (oscurecer) {
+    visualClasses = "opacity-30 grayscale blur-[1px] scale-95 z-0"
+  } else {
+    if (ramo.estado === 'aprobado') visualClasses = "opacity-75 border-slate-400 text-slate-800 bg-slate-100"
+    if (ramo.estado === 'cursando') visualClasses = "ring-4 ring-yellow-400 font-bold text-black bg-yellow-50"
+  }
+
+  if (isDragging && !isOverlay) {
+    visualClasses = "opacity-20 border-dashed bg-slate-100 border-slate-400 scale-95"
+  }
+
   return (
-    <div 
-      ref={setNodeRef} 
-      className={`w-full rounded-xl transition-all border-2 flex items-center justify-center ${
-        isOver 
-          ? 'bg-blue-50/50 dark:bg-slate-800/80 border-blue-400 border-dashed scale-105 z-10' 
-          : 'border-slate-200/60 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/10'
-      }`}
-      style={{ minHeight: '90px', height: '90px' }}
+    <div
+      ref={setNodeRef}
+      style={{
+        ...style,
+        borderLeftColor: ramo.color || '#3b82f6',
+        borderLeftWidth: '10px'
+      }}
+      {...attributes}
+      {...listeners}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+      onClick={(e) => {
+        if (!isDragging) onClick(e)
+      }}
+      className={`absolute inset-0 w-full h-full p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing text-sm flex flex-col justify-center text-left transition-all duration-300 border-y border-r border-l-0 ${visualClasses} ${isOverlay ? 'shadow-2xl opacity-100 ring-4 ring-blue-400 scale-105 rotate-2 z-50 cursor-grabbing' : 'hover:shadow-lg'}`}
     >
-      {children}
+      {iconOverlay}
+      <span className="font-extrabold text-slate-900 text-[15px] leading-tight line-clamp-2 pr-4">{ramo.nombre}</span>
+      <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">{ramo.estado}</span>
+      
+      {esPrerrequisito && <span className="absolute bottom-2 left-3 text-[10px] font-extrabold text-orange-600 uppercase">Debes aprobarlo antes</span>}
+      {esAbiertoPorFoco && <span className="absolute bottom-2 left-3 text-[10px] font-extrabold text-emerald-600 uppercase">Se desbloqueará</span>}
     </div>
   )
 }
 
-// COMPONENTE: Tarjeta del Ramo Arrastrable
-function RamoCardDraggable({ ramo }) {
-  const { setRamoEnFoco, ramos } = useMallaStore()
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: ramo.id, data: ramo })
-
-  const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined
-  const color = ramo.color || 'var(--primary-color)'
-
-  const preRequisitosFaltantes = (ramo.prerrequisitos || []).filter(preId => {
-    const rPre = ramos.find(r => r.id === preId)
-    return rPre && rPre.estado !== 'aprobado'
-  })
-  const bloqueado = preRequisitosFaltantes.length > 0
+// FIX: Pasamos el prop 'dragActivo' para que todos sepan que se está moviendo algo en la pizarra
+function RamoCard({ ramo, dragActivo }) {
+  const { setRamoSeleccionado, ramoEnFoco, setRamoEnFoco, ramos } = useMallaStore()
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ramo.id })
+  
+  const ramoFocoObj = ramos.find(r => r.id === ramoEnFoco)
+  const esFoco = ramoEnFoco === ramo.id
+  const esPrerrequisito = ramoEnFoco && ramoFocoObj?.prerrequisitos?.includes(ramo.id)
+  const esAbiertoPorFoco = ramoEnFoco && ramo.prerrequisitos?.includes(ramoEnFoco)
+  const oscurecer = ramoEnFoco && !esFoco && !esPrerrequisito && !esAbiertoPorFoco && !isDragging
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...listeners} 
-      {...attributes}
-      onDoubleClick={() => setRamoEnFoco(ramo)}
-      className={`relative w-full h-full rounded-xl p-3 cursor-grab flex flex-col justify-between shadow-sm border-2 border-transparent transition-opacity ${
-        isDragging ? 'opacity-0' : 'opacity-100 hover:shadow-md hover:scale-[1.02]'
-      } ${ramo.estado === 'aprobado' ? 'bg-emerald-50 dark:bg-emerald-950/30' : ramo.estado === 'cursando' ? 'bg-blue-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-800'}`}
-    >
-      <div className="absolute top-0 left-0 bottom-0 w-2 rounded-l-xl opacity-80" style={{ backgroundColor: color }}></div>
-      <div className="ml-2">
-        <div className="flex justify-between items-start mb-1">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 truncate pr-1">{ramo.sigla}</span>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700">{ramo.creditos || 0}</span>
-        </div>
-        <h3 className={`text-xs font-extrabold leading-tight line-clamp-2 ${bloqueado ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
-          {ramo.nombre}
-        </h3>
-      </div>
-      {bloqueado && (
-        <div className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-sm" title="Faltan pre-requisitos">🔒</div>
+    <RamoCardUI
+      ramo={ramo}
+      esFoco={esFoco}
+      esPrerrequisito={esPrerrequisito}
+      esAbiertoPorFoco={esAbiertoPorFoco}
+      oscurecer={oscurecer}
+      isDragging={isDragging}
+      setNodeRef={setNodeRef}
+      attributes={attributes}
+      listeners={listeners}
+      // FIX PERFORMANCE: Bloqueamos los hover si hay algún objeto en el aire
+      onPointerEnter={() => { if (!dragActivo && !isDragging) setRamoEnFoco(ramo.id) }}
+      onPointerLeave={() => { if (!dragActivo && !isDragging) setRamoEnFoco(null) }}
+      onClick={() => setRamoSeleccionado(ramo)}
+    />
+  )
+}
+
+function CeldaMalla({ sem, fila, ramo, handleNuevoRamo, dragActivo }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `celda-${sem}-${fila}` })
+
+  return (
+    <div ref={setNodeRef} className={`relative h-24 mb-4 rounded-xl transition-all border-2 ${isOver && !ramo ? 'bg-blue-100/50 border-blue-400 scale-105 z-10 shadow-lg' : 'border-transparent'} ${!ramo ? 'hover:border-slate-300' : ''}`}>
+      {ramo ? (
+        <RamoCard ramo={ramo} dragActivo={dragActivo} />
+      ) : (
+        <button onClick={() => handleNuevoRamo(sem, fila)} className="absolute inset-0 w-full h-full rounded-xl border-2 border-slate-300 border-dashed bg-white/40 hover:bg-white hover:border-blue-500 flex items-center justify-center text-slate-300 hover:text-blue-600 transition-colors shadow-sm">
+          <Plus size={32} strokeWidth={2.5} />
+        </button>
       )}
     </div>
   )
 }
 
 export default function TableroMalla() {
-  const { ramos, semestres, filas, actualizarRamo } = useMallaStore()
-  const [ramoArrastrado, setRamoArrastrado] = useState(null)
+  const { ramos, moverRamo, agregarRamo, numSemestres, numFilas, setRamoEnFoco } = useMallaStore()
+  const [activeId, setActiveId] = useState(null)
   const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
-  if (!mounted) return null
-
-  const handleDragStart = (event) => setRamoArrastrado(event.active.data.current)
+  const supabase = createClient()
   
-  const handleDragEnd = (event) => {
-    const { active, over } = event
-    setRamoArrastrado(null)
-    if (!over) return
+  useEffect(() => setMounted(true), [])
 
-    const [semestreId, filaIndex] = over.id.split('-')
-    actualizarRamo(active.id, { semestre_id: semestreId, fila: parseInt(filaIndex) })
+  const mallaMap = useMemo(() => {
+    const map = new Map()
+    ramos.forEach(r => {
+      map.set(`${r.semestre_columna}-${r.fila_posicion}`, r)
+    })
+    return map
+  }, [ramos])
+
+  const semestresArray = Array.from({ length: numSemestres || 6 }, (_, i) => i + 1)
+  const filasArray = Array.from({ length: numFilas || 6 }, (_, i) => i + 1)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+
+  const handleDragStart = (event) => {
+    setRamoEnFoco(null)
+    setActiveId(event.active.id)
   }
 
-  // PARCHE DE SEGURIDAD: Fuerza siempre a tener mínimo 10 filas para que la malla no colapse.
-  const filasArray = Array.from({ length: Math.max(10, filas || 10) })
+  const handleDragEnd = async (event) => {
+    setActiveId(null)
+    const { active, over } = event
+    if (!over) return
+
+    const ramoId = active.id
+    const overId = String(over.id)
+
+    if (overId.startsWith('celda-')) {
+      const [, semStr, filaStr] = overId.split('-')
+      const nuevoSemestre = parseInt(semStr, 10)
+      const nuevaFila = parseInt(filaStr, 10)
+
+      const celdaOcupada = ramos.some(r => r.semestre_columna === nuevoSemestre && r.fila_posicion === nuevaFila && r.id !== ramoId)
+
+      if (!celdaOcupada) {
+        moverRamo(ramoId, nuevoSemestre, nuevaFila)
+        await supabase.from('ramos').update({ semestre_columna: nuevoSemestre, fila_posicion: nuevaFila }).eq('id', ramoId)
+      }
+    }
+  }
+
+  const handleNuevoRamo = async (semestreColumna, filaPosicion) => {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return 
+
+    const nuevoRamo = {
+      usuario_id: user.id,
+      nombre: 'Nuevo Ramo',
+      color: '#3b82f6',
+      estado: 'pendiente',
+      semestre_columna: semestreColumna,
+      fila_posicion: filaPosicion,
+      prerrequisitos: [] 
+    }
+    
+    const { data, error } = await supabase.from('ramos').insert(nuevoRamo).select().single()
+    if (!error && data) agregarRamo(data)
+  }
+
+  const activeRamo = activeId ? ramos.find(r => r.id === activeId) : null
+
+  if (!mounted) return null 
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
-      <div className="flex gap-4">
-        {semestres.map(sem => (
-          <div key={sem.id} className="flex flex-col shrink-0" style={{ minWidth: '200px', width: '200px' }}>
-            <div className="bg-slate-900 text-white text-center py-2.5 rounded-xl font-extrabold text-sm mb-4 shadow-sm uppercase tracking-widest">
-              Semestre {sem.numero}
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="flex gap-6 overflow-x-auto pb-8 min-h-[800px] p-2 custom-scrollbar">
+        {semestresArray.map((sem) => (
+          <div key={`col-${sem}`} className="min-w-[240px] flex flex-col">
+            <div className="text-center font-extrabold text-slate-800 bg-slate-200 border border-slate-300 py-3 rounded-xl mb-4 text-sm tracking-widest shadow-sm">
+              SEMESTRE {sem}
             </div>
-            <div className="flex flex-col gap-3">
-              {filasArray.map((_, i) => {
-                const dropId = `${sem.id}-${i}`
-                // Uso de "==" en lugar de "===" para evitar errores si la base de datos devuelve números como textos
-                const ramoAca = ramos.find(r => r.semestre_id == sem.id && r.fila == i)
-                
+            
+            <div className="flex-1 bg-slate-200/40 rounded-xl p-3 border-2 border-slate-300 border-dashed relative">
+              {filasArray.map((fila) => {
+                const ramoEnEstaCelda = mallaMap.get(`${sem}-${fila}`)
                 return (
-                  <CeldaDroppable key={dropId} id={dropId}>
-                    {ramoAca && <RamoCardDraggable ramo={ramoAca} />}
-                  </CeldaDroppable>
+                  <CeldaMalla 
+                    key={`celda-${sem}-${fila}`} 
+                    sem={sem} 
+                    fila={fila} 
+                    ramo={ramoEnEstaCelda} 
+                    handleNuevoRamo={handleNuevoRamo} 
+                    dragActivo={activeId !== null} // FIX: Informa si algo está volando en la malla
+                  />
                 )
               })}
             </div>
@@ -110,14 +201,10 @@ export default function TableroMalla() {
         ))}
       </div>
 
-      <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
-        {ramoArrastrado ? (
-          <div className="rounded-xl p-3 flex flex-col justify-between shadow-2xl bg-white dark:bg-slate-700 opacity-90 scale-105 rotate-2 cursor-grabbing border border-slate-300" style={{ width: '200px', height: '90px' }}>
-            <div className="absolute top-0 left-0 bottom-0 w-2 rounded-l-xl" style={{ backgroundColor: ramoArrastrado.color || 'var(--primary-color)' }}></div>
-            <div className="ml-2">
-              <span className="text-[10px] font-black uppercase text-slate-500">{ramoArrastrado.sigla}</span>
-              <h3 className="text-xs font-extrabold leading-tight text-slate-900 dark:text-white mt-1">{ramoArrastrado.nombre}</h3>
-            </div>
+      <DragOverlay>
+        {activeRamo ? (
+          <div className="relative h-24 w-[240px]">
+             <RamoCardUI ramo={activeRamo} isOverlay={true} />
           </div>
         ) : null}
       </DragOverlay>
