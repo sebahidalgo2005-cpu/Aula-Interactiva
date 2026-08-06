@@ -41,7 +41,6 @@ export default function Navbar() {
   return (
     <header className="bg-[#0f172a] text-white py-3 px-6 shadow-md sticky top-0 z-40 flex items-center justify-between flex-wrap gap-4 transition-colors">
       
-      {/* LOGO */}
       <Link href="/dashboard" className="flex items-center gap-3 group">
         <div 
           className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-lg text-white shadow-md transition-transform group-hover:scale-105"
@@ -55,7 +54,6 @@ export default function Navbar() {
         </div>
       </Link>
 
-      {/* MENÚ NAVEGACIÓN */}
       <nav className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/80">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -79,7 +77,6 @@ export default function Navbar() {
         })}
       </nav>
 
-      {/* PERFIL Y SALIR */}
       <div className="flex items-center gap-3">
         <Link 
           href="/perfil" 
@@ -99,8 +96,7 @@ export default function Navbar() {
               <User size={12} className="text-white"/>
             )}
           </div>
-          {/* CORRECCIÓN DE LINTER AQUÍ: max-w-27.5 */}
-          <span className="max-w-27.5 truncate">
+          <span className="truncate" style={{ maxWidth: '110px' }}>
             {user?.user_metadata?.full_name?.split(' ')[0] || 'Mi Perfil'}
           </span>
         </Link>

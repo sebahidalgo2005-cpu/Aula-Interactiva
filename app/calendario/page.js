@@ -211,10 +211,8 @@ export default function CalendarioIntegradoPage() {
     <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans pb-12 transition-colors">
       <Navbar />
 
-      {/* CORRECCIÓN LINTER AQUÍ: max-w-350 */}
-      <main className="max-w-350 mx-auto mt-6 px-6">
+      <main className="mx-auto mt-6 px-6" style={{ maxWidth: '1400px' }}>
         
-        {/* PESTAÑAS SUB-HEADER */}
         <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
           <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
             <button 
@@ -251,7 +249,6 @@ export default function CalendarioIntegradoPage() {
             {pestañaActiva === 'semana' && (
               <div className="flex flex-col lg:flex-row gap-6 items-start">
                 
-                {/* PANEL DE ASISTENCIA */}
                 <div className="w-full lg:w-[320px] shrink-0 flex flex-col gap-4">
                   <h2 className="font-extrabold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-1">
                     Control de Asistencia
@@ -305,7 +302,6 @@ export default function CalendarioIntegradoPage() {
                   })}
                 </div>
 
-                {/* CALENDARIO PRINCIPAL */}
                 <div className="flex-1 w-full bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
                   
                   <div className="p-4 flex justify-between items-center bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
@@ -334,7 +330,6 @@ export default function CalendarioIntegradoPage() {
                     </div>
                   </div>
 
-                  {/* CABECERA DÍAS CON EVALUACIONES */}
                   <div className="flex ml-16 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                     {diasDeLaSemanaActual.map(dia => {
                       const esHoy = dia.fechaStr === formatFechaLocal(horaActual)
@@ -375,8 +370,8 @@ export default function CalendarioIntegradoPage() {
                     })}
                   </div>
 
-                  {/* CORRECCIÓN LINTER AQUÍ: max-h-162.5 */}
-                  <div className="flex relative overflow-y-auto max-h-162.5 custom-scrollbar">
+                  {/* Evitamos que el calendario se achique de forma incorrecta */}
+                  <div className="flex relative overflow-y-auto custom-scrollbar" style={{ maxHeight: '650px' }}>
                     <div className="w-16 shrink-0 bg-white dark:bg-slate-800 relative border-r border-slate-100 dark:border-slate-700">
                       {HORAS_MOSTRADAS.map(hora => (
                         <div key={hora} className="relative" style={{ height: `${ALTO_HORA_PX}px` }}>
@@ -449,7 +444,6 @@ export default function CalendarioIntegradoPage() {
               </div>
             )}
 
-            {/* PESTAÑA PLANTILLA BASE */}
             {pestañaActiva === 'base' && (
               <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
                 <h2 className="text-base font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Añadir bloque semanal a la plantilla</h2>
@@ -531,8 +525,7 @@ export default function CalendarioIntegradoPage() {
                         <div className="bg-slate-900 text-white text-center py-2.5 font-extrabold text-xs uppercase">
                           {dia.nombre}
                         </div>
-                        {/* CORRECCIÓN LINTER AQUÍ: min-h-62.5 */}
-                        <div className="p-3 flex-1 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 min-h-62.5">
+                        <div className="p-3 flex-1 space-y-3 bg-slate-50/50 dark:bg-slate-900/40" style={{ minHeight: '250px' }}>
                           {bloquesDelDia.map(bloque => {
                             const ramoObj = ramos.find(r => r.id === bloque.ramo_id)
                             return (
@@ -559,47 +552,25 @@ export default function CalendarioIntegradoPage() {
           </>
         )}
 
-        {/* MODAL DE REGISTRO ASISTENCIA */}
+        {/* Modal de Asistencia (No modificado) */}
         {modalAsistencia && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700 p-6 space-y-4">
-              <h3 className="font-extrabold text-lg text-slate-900 dark:text-white leading-tight">
-                {modalAsistencia.nombre}
-              </h3>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                <CalendarIcon size={14}/> {modalAsistencia.fechaStr.split('-').reverse().join('/')} | {modalAsistencia.horario}
-              </p>
+             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+              <h3 className="font-extrabold text-lg text-slate-900 dark:text-white leading-tight">{modalAsistencia.nombre}</h3>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2"><CalendarIcon size={14}/> {modalAsistencia.fechaStr.split('-').reverse().join('/')} | {modalAsistencia.horario}</p>
               
               <div className="space-y-3">
-                <button 
-                  onClick={() => guardarAsistencia('presente')} 
-                  className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-extrabold text-sm"
-                >
-                  <span className="flex items-center gap-2"><CheckCircle size={18}/> Fui a clases (Presente)</span>
-                </button>
-                <button 
-                  onClick={() => guardarAsistencia('ausente')} 
-                  className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-red-200 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 font-extrabold text-sm"
-                >
-                  <span className="flex items-center gap-2"><XCircle size={18}/> Falté a clases (Ausente)</span>
-                </button>
+                <button onClick={() => guardarAsistencia('presente')} className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-extrabold text-sm"><span className="flex items-center gap-2"><CheckCircle size={18}/> Fui a clases (Presente)</span></button>
+                <button onClick={() => guardarAsistencia('ausente')} className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-red-200 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 font-extrabold text-sm"><span className="flex items-center gap-2"><XCircle size={18}/> Falté a clases (Ausente)</span></button>
               </div>
 
               <div className="pt-2 flex justify-between items-center">
-                {modalAsistencia.estadoActual ? (
-                  <button onClick={() => guardarAsistencia('borrar')} className="text-xs font-bold text-slate-400 hover:text-red-500">
-                    Borrar registro
-                  </button>
-                ) : <div></div>}
-
-                <button onClick={() => setModalAsistencia(null)} className="text-xs font-bold bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-lg">
-                  Cerrar
-                </button>
+                {modalAsistencia.estadoActual ? <button onClick={() => guardarAsistencia('borrar')} className="text-xs font-bold text-slate-400 hover:text-red-500">Borrar registro</button> : <div></div>}
+                <button onClick={() => setModalAsistencia(null)} className="text-xs font-bold bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-lg">Cerrar</button>
               </div>
             </div>
           </div>
         )}
-
       </main>
     </div>
   )
