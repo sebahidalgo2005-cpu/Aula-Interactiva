@@ -4,7 +4,8 @@
 /* 2. LUEGO IMPORTAMOS TAILWIND */
 @import "tailwindcss";
 
-/* 3. Variables y configuraciones originales */
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -30,9 +31,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* --------------------------------------------------------
-   4. Tema Azul Universitario (Navy)
--------------------------------------------------------- */
+/* Tema Azul Universitario (Navy) */
 html.theme-navy {
   --background: #0b132b;
   --foreground: #ffffff;
@@ -44,9 +43,7 @@ html.theme-navy body {
   background-color: var(--background) !important;
 }
 
-/* --------------------------------------------------------
-   5. Diseño de la barra de desplazamiento (Scrollbar)
--------------------------------------------------------- */
+/* Scrollbar personalizada */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
