@@ -370,7 +370,6 @@ export default function CalendarioIntegradoPage() {
                     })}
                   </div>
 
-                  {/* Evitamos que el calendario se achique de forma incorrecta */}
                   <div className="flex relative overflow-y-auto custom-scrollbar" style={{ maxHeight: '650px' }}>
                     <div className="w-16 shrink-0 bg-white dark:bg-slate-800 relative border-r border-slate-100 dark:border-slate-700">
                       {HORAS_MOSTRADAS.map(hora => (
@@ -552,7 +551,6 @@ export default function CalendarioIntegradoPage() {
           </>
         )}
 
-        {/* Modal de Asistencia (No modificado) */}
         {modalAsistencia && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700 p-6 space-y-4">

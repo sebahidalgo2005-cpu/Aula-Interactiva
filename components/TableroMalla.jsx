@@ -3,16 +3,18 @@ import React, { useState, useEffect } from 'react'
 import { DndContext, useDraggable, useDroppable, closestCenter, DragOverlay } from '@dnd-kit/core'
 import { useMallaStore } from '@/store/useMallaStore'
 
-// COMPONENTE: Casilla vacía donde se sueltan los ramos
+// COMPONENTE: Casilla donde se sueltan los ramos (Ahora SIEMPRE visible)
 function CeldaDroppable({ id, children }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
     <div 
       ref={setNodeRef} 
-      className={`rounded-xl transition-all border-2 flex items-center justify-center ${
-        isOver ? 'bg-blue-50/50 dark:bg-slate-800/80 border-blue-400 border-dashed scale-105' : 'border-transparent'
+      className={`w-full rounded-xl transition-all border-2 flex items-center justify-center ${
+        isOver 
+          ? 'bg-blue-50/50 dark:bg-slate-800/80 border-blue-400 border-dashed scale-105 z-10' 
+          : 'border-slate-200/60 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/10'
       }`}
-      style={{ height: '90px' }}
+      style={{ minHeight: '90px', height: '90px' }}
     >
       {children}
     </div>
@@ -80,20 +82,22 @@ export default function TableroMalla() {
     actualizarRamo(active.id, { semestre_id: semestreId, fila: parseInt(filaIndex) })
   }
 
-  const filasArray = Array.from({ length: filas })
+  // PARCHE DE SEGURIDAD: Fuerza siempre a tener mínimo 10 filas para que la malla no colapse.
+  const filasArray = Array.from({ length: Math.max(10, filas || 10) })
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
       <div className="flex gap-4">
         {semestres.map(sem => (
-          <div key={sem.id} className="flex flex-col shrink-0" style={{ width: '200px' }}>
+          <div key={sem.id} className="flex flex-col shrink-0" style={{ minWidth: '200px', width: '200px' }}>
             <div className="bg-slate-900 text-white text-center py-2.5 rounded-xl font-extrabold text-sm mb-4 shadow-sm uppercase tracking-widest">
               Semestre {sem.numero}
             </div>
             <div className="flex flex-col gap-3">
               {filasArray.map((_, i) => {
                 const dropId = `${sem.id}-${i}`
-                const ramoAca = ramos.find(r => String(r.semestre_id) === String(sem.id) && Number(r.fila) === Number(i))
+                // Uso de "==" en lugar de "===" para evitar errores si la base de datos devuelve números como textos
+                const ramoAca = ramos.find(r => r.semestre_id == sem.id && r.fila == i)
                 
                 return (
                   <CeldaDroppable key={dropId} id={dropId}>

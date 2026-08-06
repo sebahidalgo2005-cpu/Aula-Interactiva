@@ -39,10 +39,14 @@ export default function MallaPage() {
         supabase.from('categorias').select('*').eq('usuario_id', user.id)
       ])
 
+      // Cálculo Seguro de filas
       if (ramosRes.data) {
         setRamos(ramosRes.data)
-        // Parche: Ajusta filas automáticamente si tienes ramos guardados abajo
-        const maxFilaDetectada = Math.max(...ramosRes.data.map(r => Number(r.fila) || 0), 9)
+        let maxFilaDetectada = 9
+        ramosRes.data.forEach(r => {
+          const fn = parseInt(r.fila, 10)
+          if (!isNaN(fn) && fn > maxFilaDetectada) maxFilaDetectada = fn
+        })
         setFilas(maxFilaDetectada + 1)
       }
       
@@ -85,10 +89,7 @@ export default function MallaPage() {
     formData.append('usuario_id', user.id)
 
     try {
-      const response = await fetch('/api/calendario/importar-malla', {
-        method: 'POST',
-        body: formData
-      })
+      const response = await fetch('/api/calendario/importar-malla', { method: 'POST', body: formData })
       if (!response.ok) throw new Error("Error en el servidor de IA")
       const data = await response.json()
       setRamos([...ramos, ...data.ramosExtraidos])
@@ -125,22 +126,21 @@ export default function MallaPage() {
       <Navbar />
 
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between flex-wrap gap-4 sticky top-16 z-30 shadow-sm">
-        
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => setRamoEnFoco({ id: null, nuevo: true })} className="text-white font-extrabold text-xs px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition hover:brightness-110" style={{ backgroundColor: 'var(--primary-color, #3b82f6)' }}>
             <Plus size={16}/> Añadir Ramo
           </button>
 
           <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-            <button onClick={agregarSemestre} className="hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs px-3 py-2 flex items-center gap-1 transition" title="Añadir Semestre"><Plus size={14}/> Sem</button>
+            <button onClick={agregarSemestre} className="hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs px-3 py-2 flex items-center gap-1 transition"><Plus size={14}/> Sem</button>
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600"></div>
-            <button onClick={eliminarSemestre} className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/50 font-bold text-xs px-3 py-2 flex items-center gap-1 transition" title="Quitar Semestre"><Minus size={14}/> Sem</button>
+            <button onClick={eliminarSemestre} className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/50 font-bold text-xs px-3 py-2 flex items-center gap-1 transition"><Minus size={14}/> Sem</button>
           </div>
 
           <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-            <button onClick={agregarFila} className="hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs px-3 py-2 flex items-center gap-1 transition" title="Añadir Fila"><Plus size={14}/> Fila</button>
+            <button onClick={agregarFila} className="hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs px-3 py-2 flex items-center gap-1 transition"><Plus size={14}/> Fila</button>
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600"></div>
-            <button onClick={eliminarFila} className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/50 font-bold text-xs px-3 py-2 flex items-center gap-1 transition" title="Quitar Fila"><Minus size={14}/> Fila</button>
+            <button onClick={eliminarFila} className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/50 font-bold text-xs px-3 py-2 flex items-center gap-1 transition"><Minus size={14}/> Fila</button>
           </div>
         </div>
 
