@@ -211,7 +211,8 @@ export default function CalendarioIntegradoPage() {
     <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans pb-12 transition-colors">
       <Navbar />
 
-      <main className="max-w-[1400px] mx-auto mt-6 px-6">
+      {/* CORRECCIÓN LINTER AQUÍ: max-w-350 */}
+      <main className="max-w-350 mx-auto mt-6 px-6">
         
         {/* PESTAÑAS SUB-HEADER */}
         <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
@@ -374,8 +375,8 @@ export default function CalendarioIntegradoPage() {
                     })}
                   </div>
 
-                  {/* CUADRÍCULA DE HORARIOS */}
-                  <div className="flex relative overflow-y-auto max-h-[650px] custom-scrollbar">
+                  {/* CORRECCIÓN LINTER AQUÍ: max-h-162.5 */}
+                  <div className="flex relative overflow-y-auto max-h-162.5 custom-scrollbar">
                     <div className="w-16 shrink-0 bg-white dark:bg-slate-800 relative border-r border-slate-100 dark:border-slate-700">
                       {HORAS_MOSTRADAS.map(hora => (
                         <div key={hora} className="relative" style={{ height: `${ALTO_HORA_PX}px` }}>
@@ -530,7 +531,8 @@ export default function CalendarioIntegradoPage() {
                         <div className="bg-slate-900 text-white text-center py-2.5 font-extrabold text-xs uppercase">
                           {dia.nombre}
                         </div>
-                        <div className="p-3 flex-1 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 min-h-[250px]">
+                        {/* CORRECCIÓN LINTER AQUÍ: min-h-62.5 */}
+                        <div className="p-3 flex-1 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 min-h-62.5">
                           {bloquesDelDia.map(bloque => {
                             const ramoObj = ramos.find(r => r.id === bloque.ramo_id)
                             return (

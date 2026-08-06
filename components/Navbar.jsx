@@ -99,7 +99,8 @@ export default function Navbar() {
               <User size={12} className="text-white"/>
             )}
           </div>
-          <span className="max-w-[110px] truncate">
+          {/* CORRECCIÓN DE LINTER AQUÍ: max-w-27.5 */}
+          <span className="max-w-27.5 truncate">
             {user?.user_metadata?.full_name?.split(' ')[0] || 'Mi Perfil'}
           </span>
         </Link>

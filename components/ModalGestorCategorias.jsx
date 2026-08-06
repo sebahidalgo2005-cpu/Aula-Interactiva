@@ -57,12 +57,12 @@ export default function ModalGestorCategorias() {
                 type="color" 
                 value={nuevaCategoria.color} 
                 onChange={(e) => setNuevaCategoria({...nuevaCategoria, color: e.target.value})}
-                className="h-[46px] w-12 border-2 border-slate-300 rounded-lg cursor-pointer p-0.5 bg-white transition focus:border-blue-500"
+                className="h-11.5 w-12 border-2 border-slate-300 rounded-lg cursor-pointer p-0.5 bg-white transition focus:border-blue-500"
               />
             </div>
             <button 
               onClick={handleAgregar}
-              className="bg-blue-600 hover:bg-blue-700 text-white p-[11px] rounded-lg transition font-bold shadow-md h-[46px] flex items-center justify-center"
+              className="bg-blue-600 hover:bg-blue-700 text-white p-2.75 rounded-lg transition font-bold shadow-md h-11.5 flex items-center justify-center"
             >
               <Plus size={20} strokeWidth={2.5} />
             </button>

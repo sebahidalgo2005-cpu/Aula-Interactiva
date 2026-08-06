@@ -165,12 +165,12 @@ export default function ModalRamo() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-2">Nombre del Ramo</label>
+                  <label className=" text-sm font-bold text-slate-900 mb-2">Nombre del Ramo</label>
                   <input type="text" value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} className="w-full border-2 border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-slate-900 font-bold" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2 flex items-center gap-1"><Tag size={14}/> Categoría</label>
+                    <label className=" text-sm font-bold text-slate-900 mb-2 flex items-center gap-1"><Tag size={14}/> Categoría</label>
                     <select value={categorias.find(c => c.color === formData.color)?.nombre || ""} onChange={(e) => { const cat = categorias.find(c => c.nombre === e.target.value); if (cat) setFormData({...formData, color: cat.color}) }} className="w-full border-2 border-slate-300 rounded-lg p-2.5 outline-none bg-white text-slate-900 font-bold text-sm">
                       <option value="">Seleccionar...</option>
                       {categorias.map(cat => <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>)}
@@ -189,7 +189,7 @@ export default function ModalRamo() {
 
               <div className="grid grid-cols-2 gap-6 bg-blue-50/50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
                 <div>
-                  <label className="block text-xs font-bold text-blue-900 mb-1 uppercase flex items-center gap-1"><Award size={14}/> Créditos (SCT)</label>
+                  <label className=" text-xs font-bold text-blue-900 mb-1 uppercase flex items-center gap-1"><Award size={14}/> Créditos (SCT)</label>
                   {/* FIX: Mantenemos el estado en String para que no borre puntos/comas */}
                   <input type="text" value={formData.creditos} onChange={(e) => setFormData({...formData, creditos: e.target.value})} className="w-full border-2 border-blue-200 rounded-lg p-2.5 font-bold text-slate-900 bg-white outline-none" />
                 </div>
