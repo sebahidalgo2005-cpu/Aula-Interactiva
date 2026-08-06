@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
+import { useMallaStore } from '@/store/useMallaStore'
 import { 
   LayoutDashboard, Layers, Calendar, CheckSquare, 
   BarChart2, User, LogOut 
@@ -14,8 +15,13 @@ export default function Navbar() {
   const router = useRouter()
   const supabase = createClient()
   const [user, setUser] = useState(null)
+  
+  // Conexión al color dinámico global
+  const { temaPlataforma } = useMallaStore()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const getUsuario = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) setUser(user)
@@ -38,13 +44,16 @@ export default function Navbar() {
     { href: '/rendimiento', label: 'Rendimiento', icon: BarChart2 },
   ]
 
+  // Evitar error de hidratación con el color
+  const colorActivo = mounted ? (temaPlataforma || '#3b82f6') : '#3b82f6'
+
   return (
-    <header className="bg-[#0f172a] text-white py-3 px-6 shadow-md sticky top-0 z-40 flex items-center justify-between flex-wrap gap-4 transition-colors">
+    <header className="bg-[#0f172a] text-white py-3 px-6 shadow-md z-40 flex items-center justify-between flex-wrap gap-4 transition-colors">
       
       <Link href="/dashboard" className="flex items-center gap-3 group">
         <div 
           className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-lg text-white shadow-md transition-transform group-hover:scale-105"
-          style={{ backgroundColor: 'var(--primary-color, #3b82f6)' }}
+          style={{ backgroundColor: colorActivo }}
         >
           A
         </div>
@@ -68,7 +77,7 @@ export default function Navbar() {
                   ? 'text-white shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
               }`}
-              style={isActive ? { backgroundColor: 'var(--primary-color, #3b82f6)' } : {}}
+              style={isActive ? { backgroundColor: colorActivo } : {}}
             >
               <Icon size={15} />
               <span>{item.label}</span>
@@ -88,7 +97,7 @@ export default function Navbar() {
         >
           <div 
             className="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center shrink-0"
-            style={{ backgroundColor: 'var(--primary-color, #3b82f6)' }}
+            style={{ backgroundColor: colorActivo }}
           >
             {user?.user_metadata?.avatar_url ? (
               <Image src={user.user_metadata.avatar_url} alt="User" width={20} height={20} unoptimized />

@@ -120,7 +120,6 @@ export default function TableroMalla() {
     const map = new Map()
     ramos.forEach(r => {
       map.set(`${r.semestre_columna}-${r.fila_posicion}`, r)
-      // FIX PROFESIONAL: Si es anual, "ocupar" lógicamente la celda adyacente para validaciones
       if (r.es_anual) {
         map.set(`${r.semestre_columna + 1}-${r.fila_posicion}`, { ...r, esFantasma: true })
       }
@@ -156,28 +155,22 @@ export default function TableroMalla() {
       const ramoMovido = ramos.find(r => r.id === ramoId)
       if (!ramoMovido) return;
 
-      // FIX PROFESIONAL: Bloquear Ramos Anuales que intenten desbordar la malla
       if (ramoMovido.es_anual && nuevoSemestre >= numSemestres) {
         return alert("Un ramo anual necesita abarcar 2 semestres. No puedes colocarlo en la última columna.")
       }
 
-      // Validar que la celda principal y la celda adyacente (si es anual) estén vacías
       const celdaOcupada = mallaMap.has(`${nuevoSemestre}-${nuevaFila}`) && mallaMap.get(`${nuevoSemestre}-${nuevaFila}`).id !== ramoId
       const celdaSiguienteOcupada = ramoMovido.es_anual ? (mallaMap.has(`${nuevoSemestre + 1}-${nuevaFila}`) && mallaMap.get(`${nuevoSemestre + 1}-${nuevaFila}`).id !== ramoId) : false;
 
       if (!celdaOcupada && !celdaSiguienteOcupada) {
         
-        // Guardamos las posiciones previas por si hay que hacer un "Rollback"
         const prevCol = ramoMovido.semestre_columna
         const prevFila = ramoMovido.fila_posicion
 
-        // UI Optimista (Mueve instantáneamente en el cliente)
         moverRamo(ramoId, nuevoSemestre, nuevaFila) 
         
-        // Ejecución en la base de datos
         const { error } = await supabase.from('ramos').update({ semestre_columna: nuevoSemestre, fila_posicion: nuevaFila }).eq('id', ramoId)
         
-        // FIX PROFESIONAL: Rollback ante fallo de internet o base de datos
         if (error) {
           console.error("Error al sincronizar con BD:", error)
           moverRamo(ramoId, prevCol, prevFila)
@@ -224,7 +217,6 @@ export default function TableroMalla() {
             
             <div className="flex-1 bg-slate-200/40 rounded-xl p-3 border-2 border-slate-300 border-dashed relative">
               {filasArray.map((fila) => {
-                // Evitamos renderizar objetos fantasmas (utilizados lógicamente para validar espacios de Ramos Anuales)
                 const ramoReal = mallaMap.has(`${sem}-${fila}`) && !mallaMap.get(`${sem}-${fila}`).esFantasma ? mallaMap.get(`${sem}-${fila}`) : null
                 
                 return (

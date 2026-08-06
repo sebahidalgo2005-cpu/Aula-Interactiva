@@ -6,7 +6,7 @@ import TableroMalla from '@/components/TableroMalla'
 import ModalGestorCategorias from '@/components/ModalGestorCategorias'
 import ModalRamo from '@/components/ModalRamo'
 import { useMallaStore } from '@/store/useMallaStore'
-import { Settings, Plus, Minus, LogOut, Link as LinkIcon, Calendar as CalendarIcon, LayoutDashboard, TrendingUp, Download, Share2, UploadCloud, UserCircle } from 'lucide-react'
+import { Settings, Plus, Minus, Link as LinkIcon, Calendar as CalendarIcon, LayoutDashboard, TrendingUp, Download, Share2, UploadCloud, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import html2canvas from 'html2canvas' 
 
@@ -20,8 +20,6 @@ export default function MallaPage() {
   const [user, setUser] = useState(null)
   const [exportando, setExportando] = useState(false)
   const [isClient, setIsClient] = useState(false)
-  
-  // FIX PROFESIONAL: Estado para el procesador de IA
   const [procesandoIA, setProcesandoIA] = useState(false)
 
   useEffect(() => {
@@ -90,7 +88,6 @@ export default function MallaPage() {
     alert("¡Código de tu malla copiado al portapapeles! Envíalo a tus compañeros para que lo importen.")
   }
 
-  // FIX PROFESIONAL: Función conectada para Importar Malla vía IA
   const handleImportarIA = async (e) => {
     const file = e.target.files[0]
     if (!file || !user) return
@@ -109,17 +106,17 @@ export default function MallaPage() {
       if (!response.ok) throw new Error("Fallo en el servidor al analizar el documento.")
       
       alert("¡Malla importada y procesada correctamente!")
-      window.location.reload() // Sincronización rápida
+      window.location.reload()
     } catch (error) {
       alert("Error al importar: " + error.message)
     } finally {
       setProcesandoIA(false)
-      e.target.value = null // Resetea el input file
+      e.target.value = null 
     }
   }
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center text-white font-bold text-xl transition-colors duration-300" style={{ backgroundColor: isClient ? (temaPlataforma || '#0f172a') : '#0f172a' }}>
+    <div className="flex flex-1 items-center justify-center text-white font-bold text-xl transition-colors duration-300" style={{ backgroundColor: isClient ? (temaPlataforma || '#0f172a') : '#0f172a' }}>
       Cargando Malla...
     </div>
   )
@@ -129,9 +126,9 @@ export default function MallaPage() {
   const porcentaje = totalRamos === 0 ? 0 : Math.round((aprobados / totalRamos) * 100)
 
   return (
-    <div className="flex h-screen bg-[#f1f5f9] font-sans">
+    <div className="flex flex-1 bg-[#f1f5f9] font-sans overflow-hidden">
       
-      <aside className="w-[280px] text-white flex flex-col shrink-0 border-r border-slate-900 shadow-xl z-20 transition-colors duration-300" style={{ backgroundColor: isClient ? (temaPlataforma || '#0f172a') : '#0f172a' }}>
+      <aside className="w-[280px] h-full overflow-y-auto custom-scrollbar text-white flex flex-col shrink-0 border-r border-slate-900 shadow-xl z-20 transition-colors duration-300" style={{ backgroundColor: isClient ? (temaPlataforma || '#0f172a') : '#0f172a' }}>
         <div className="p-6 pb-2">
           <h1 className="text-2xl font-extrabold text-white mb-2 tracking-tight">Mi Malla Académica</h1>
           <button className="text-sm text-sky-300 hover:text-white flex items-center gap-2 transition font-medium"><LinkIcon size={14} /> Editar Nombre</button>
@@ -139,7 +136,7 @@ export default function MallaPage() {
 
         <div className="px-6 pb-4 pt-2">
           <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-2 cursor-pointer hover:text-white transition">
-            Color del Tema: 
+            Color del Tema Libre: 
             <input 
               type="color" 
               value={isClient ? (temaPlataforma || '#0f172a') : '#0f172a'} 
@@ -157,7 +154,7 @@ export default function MallaPage() {
           <div className="text-right text-sm text-sky-300 font-bold">{aprobados} / {totalRamos} ({porcentaje}%)</div>
         </div>
 
-        <div className="px-6 py-5 border-t border-slate-700/50 flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+        <div className="px-6 py-5 border-t border-slate-700/50 flex-1 space-y-2">
           
           <h3 className="text-xs font-bold text-slate-400 mb-3 tracking-widest uppercase">Módulos Principales</h3>
           <Link href="/dashboard" className="w-full flex items-center gap-3 bg-slate-800/80 hover:bg-slate-700 text-sm py-2.5 px-4 rounded-md transition text-white font-bold border border-slate-700/50">
@@ -184,7 +181,6 @@ export default function MallaPage() {
             <Share2 size={16} /> Compartir Plantilla
           </button>
           
-          {/* FIX PROFESIONAL: Botón IA Activado con Input Integrado */}
           <label className={`w-full flex items-center gap-3 ${procesandoIA ? 'bg-amber-800' : 'bg-amber-600 hover:bg-amber-700'} text-sm py-2.5 px-4 rounded-md text-left transition text-white font-bold shadow-md mt-2 cursor-pointer`}>
             <UploadCloud size={16} /> {procesandoIA ? 'Procesando IA...' : 'Importar Malla (IA)'}
             <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="hidden" onChange={handleImportarIA} disabled={procesandoIA} />
@@ -199,13 +195,9 @@ export default function MallaPage() {
             <button onClick={() => modificarFilas(-1)} className="flex justify-center items-center gap-2 bg-black/20 hover:bg-black/40 text-xs py-2 rounded-md transition"><Minus size={14} /> Fila</button>
           </div>
         </div>
-
-        <div className="p-4 border-t border-slate-700/50 bg-black/30">
-          <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }} className="w-full flex justify-center gap-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white text-sm py-2 rounded-md transition font-bold"><LogOut size={16} /> Salir</button>
-        </div>
       </aside>
 
-      <main id="contenedor-malla" className="flex-1 overflow-auto p-8 relative bg-[#f1f5f9]">
+      <main id="contenedor-malla" className="flex-1 h-full overflow-auto p-8 relative bg-[#f1f5f9]">
         <TableroMalla />
       </main>
 
