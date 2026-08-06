@@ -1,10 +1,15 @@
+/* 1. IMPORTACIONES DE TERCEROS SIEMPRE VAN PRIMERO */
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+/* 2. LUEGO IMPORTAMOS TAILWIND */
 @import "tailwindcss";
 
+/* 3. Variables y configuraciones originales */
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
-@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -23,4 +28,40 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* --------------------------------------------------------
+   4. Tema Azul Universitario (Navy)
+-------------------------------------------------------- */
+html.theme-navy {
+  --background: #0b132b;
+  --foreground: #ffffff;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+html.theme-navy body {
+  background-color: var(--background) !important;
+}
+
+/* --------------------------------------------------------
+   5. Diseño de la barra de desplazamiento (Scrollbar)
+-------------------------------------------------------- */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb,
+html.theme-navy .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
 }

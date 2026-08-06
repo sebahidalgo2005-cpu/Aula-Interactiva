@@ -1,76 +1,84 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-// Usamos la Service Role Key para que el servidor de Google pueda consultar los datos 
-// sin necesidad de "iniciar sesión" a nivel de navegador.
+// Servicio Supabase Service Role para que Google/Apple Calendar lean los datos públicamente
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
 export async function GET(request, { params }) {
-  const { usuario_id } = await params // Corrección 1: await params obligatorio
+  // Await obligatorio para params en Next.js 15
+  const { usuario_id } = await params
 
   try {
-    // 1. Consultar a la DB todos los ramos y horarios del usuario en cuestión
-    const { data: ramos, error: errorRamos } = await supabase
-      .from('ramos')
-      .select('*')
-      .eq('usuario_id', usuario_id)
-      .eq('estado', 'cursando')
+    // 1. Consultar ramos en cursando, horarios y evaluaciones pendientes
+    const [ramosRes, horariosRes, evalRes] = await Promise.all([
+      supabase.from('ramos').select('*').eq('usuario_id', usuario_id).eq('estado', 'cursando'),
+      supabase.from('horarios').select('*').eq('usuario_id', usuario_id),
+      supabase.from('evaluaciones').select('*').eq('usuario_id', usuario_id).eq('completada', false)
+    ])
 
-    const { data: horarios, error: errorHorarios } = await supabase
-      .from('horarios')
-      .select('*')
-      .eq('usuario_id', usuario_id)
-
-    if (errorRamos || errorHorarios || !ramos || !horarios) {
-      return new NextResponse("Datos no encontrados", { status: 404 })
+    if (ramosRes.error || horariosRes.error) {
+      return new NextResponse("Error al consultar datos", { status: 500 })
     }
+
+    const ramos = ramosRes.data || []
+    const horarios = horariosRes.data || []
+    const evaluaciones = evalRes.data || []
 
     const DIAS_ICS = { 
       'lunes': 'MO', 'martes': 'TU', 'miercoles': 'WE', 
       'jueves': 'TH', 'viernes': 'FR', 'sabado': 'SA' 
     }
 
-    // 2. Construir la cabecera del archivo iCalendar (Webcal)
-    let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mi ERP Universitario//ES\nCALSCALE:GREGORIAN\n"
-    ics += "X-WR-CALNAME:Mi Horario Universitario\n" // Nombre del calendario en Google
-    ics += "REFRESH-INTERVAL;VALUE=DURATION:PT12H\n" // Se refresca cada 12 horas
+    // Cabecera especificación RFC 5545
+    let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Aula Interactiva ERP//ES\nCALSCALE:GREGORIAN\n"
+    ics += "X-WR-CALNAME:Mi Horario Universitario\n"
+    ics += "REFRESH-INTERVAL;VALUE=DURATION:PT12H\n"
 
-    // 3. Iterar cada ramo en estado "Cursando" para agregar sus eventos recurrentes
+    // 2. Agregar clases recurrentes
     ramos.forEach(ramo => {
-      // Ignorar ramos que no tienen tramo de fechas definidos
       if (!ramo.fecha_inicio || !ramo.fecha_fin) return
       
       const fFin = ramo.fecha_fin.replace(/-/g, '') + 'T235959Z'
       const fIni = ramo.fecha_inicio.replace(/-/g, '')
-      
       const horariosRamo = horarios.filter(h => h.ramo_id === ramo.id)
       
       horariosRamo.forEach(h => {
         const tIni = h.hora_inicio.replace(':', '') + '00'
         const tFin = h.hora_fin.replace(':', '') + '00'
         const diaIcs = DIAS_ICS[h.dia]
+        if (!diaIcs) return
         
         ics += `BEGIN:VEVENT\n`
-        ics += `UID:${ramo.id}-${h.dia}-${h.hora_inicio}@erp-universitario\n`
-        ics += `SUMMARY:${ramo.nombre}\n`
+        ics += `UID:clase-${ramo.id}-${h.dia}-${h.hora_inicio}@aulainteractiva\n`
+        ics += `SUMMARY:Clase: ${ramo.nombre}\n`
         ics += `DTSTART;TZID=America/Santiago:${fIni}T${tIni}\n`
         ics += `DTEND;TZID=America/Santiago:${fIni}T${tFin}\n`
-        // Establecer repetición semanal hasta la fecha de término de clases del ramo
         ics += `RRULE:FREQ=WEEKLY;UNTIL=${fFin};BYDAY=${diaIcs}\n`
-        
-        if (h.sala) {
-          ics += `LOCATION:${h.sala}\n`
-        }
+        if (h.sala) ics += `LOCATION:${h.sala}\n`
         ics += `END:VEVENT\n`
       })
     })
 
+    // 3. Agregar Evaluaciones/Pruebas como eventos de día completo
+    evaluaciones.forEach(ev => {
+      const ramo = ramos.find(r => r.id === ev.ramo_id)
+      const fechaFormat = ev.fecha_entrega.replace(/-/g, '')
+      
+      ics += `BEGIN:VEVENT\n`
+      ics += `UID:eval-${ev.id}@aulainteractiva\n`
+      ics += `SUMMARY:📌 [${ev.tipo.toUpperCase()}] ${ev.titulo} (${ramo?.nombre || 'General'})\n`
+      ics += `DTSTART;VALUE=DATE:${fechaFormat}\n`
+      ics += `DTEND;VALUE=DATE:${fechaFormat}\n`
+      ics += `DESCRIPTION:Evaluación o entrega desde Aula Interactiva\n`
+      ics += `END:VEVENT\n`
+    })
+
     ics += "END:VCALENDAR"
 
-    // Corrección 2: Reemplazar \n por \r\n para cumplir especificación mundial RFC 5545
+    // Retorna archivo con saltos de línea CRLF (\r\n) obligatorios
     return new NextResponse(ics.replace(/\n/g, '\r\n'), {
       status: 200,
       headers: {
