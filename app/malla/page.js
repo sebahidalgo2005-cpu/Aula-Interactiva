@@ -10,6 +10,7 @@ import { Settings, Plus, Minus, LogOut, Link as LinkIcon, Calendar as CalendarIc
 import Link from 'next/link'
 import html2canvas from 'html2canvas' 
 
+
 export default function MallaPage() {
   const supabase = createClient()
   const router = useRouter()
